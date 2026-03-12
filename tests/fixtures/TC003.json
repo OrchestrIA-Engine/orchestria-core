@@ -1,0 +1,8 @@
+{
+  "id": "TC003",
+  "name": "Menu sin timeout",
+  "yaml": "nodes:\n  - id: entrada\n    type: entry\n    name: Entrada\n    next: [menu]\n  - id: menu\n    name: Menu sin timeout\n    type: menu\n    prompt: Pulse 1\n    next: [salida]\n  - id: salida\n    name: Salida\n    type: exit",
+  "expected": {
+    "min_improvements": 1
+  }
+}

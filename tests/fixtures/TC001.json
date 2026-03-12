@@ -1,0 +1,9 @@
+{
+  "id": "TC001",
+  "name": "Flujo perfecto simple",
+  "yaml": "nodes:\n  - id: entrada\n    name: Entrada\n    type: entry\n    next: [menu]\n  - id: menu\n    name: Menu\n    type: menu\n    prompt: Pulse 1 ventas\n    timeout: 10\n    next: [ventas]\n  - id: ventas\n    name: Ventas\n    type: transfer\n    queue: ventas\n    next: [salida]\n  - id: salida\n    name: Salida\n    type: exit",
+  "expected": {
+    "min_score": 60,
+    "max_critical_issues": 5
+  }
+}

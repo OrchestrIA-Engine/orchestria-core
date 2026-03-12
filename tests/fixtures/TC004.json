@@ -1,0 +1,9 @@
+{
+  "id": "TC004",
+  "name": "Referencia rota",
+  "yaml": "nodes:\n  - id: entrada\n    name: Entrada\n    type: entry\n    next: [nodo_inexistente]",
+  "expected": {
+    "max_score": 40,
+    "min_critical_issues": 1
+  }
+}
