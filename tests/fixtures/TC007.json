@@ -1,0 +1,10 @@
+{
+  "id": "TC007",
+  "name": "Cloud - Referencia rota",
+  "format": "genesys_cloud",
+  "yaml": "{\"name\": \"BrokenCloud\", \"flow\": {\"states\": [{\"refId\": \"start\", \"type\": \"menu\", \"name\": \"Main Menu\", \"transitions\": [{\"targetStateRefId\": \"nodo_fantasma\"}]}]}}",
+  "expected": {
+    "max_score": 50,
+    "min_critical_issues": 1
+  }
+}

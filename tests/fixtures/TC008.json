@@ -1,0 +1,10 @@
+{
+  "id": "TC008",
+  "name": "Cloud - Flujo complejo sin fallback",
+  "format": "genesys_cloud",
+  "yaml": "{\"name\": \"ComplexCloud\", \"flow\": {\"states\": [{\"refId\": \"start\", \"type\": \"menu\", \"name\": \"Main Menu\", \"transitions\": [{\"targetStateRefId\": \"opt1\"}, {\"targetStateRefId\": \"opt2\"}]}, {\"refId\": \"opt1\", \"type\": \"transfer\", \"name\": \"Transfer Sales\", \"transitions\": []}, {\"refId\": \"opt2\", \"type\": \"transfer\", \"name\": \"Transfer Support\", \"transitions\": []}]}}",
+  "expected": {
+    "min_score": 1,
+    "min_improvements": 1
+  }
+}

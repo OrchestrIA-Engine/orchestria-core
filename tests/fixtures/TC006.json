@@ -1,0 +1,10 @@
+{
+  "id": "TC006",
+  "name": "Cloud - Flujo basico correcto",
+  "format": "genesys_cloud",
+  "yaml": "{\"name\": \"CloudFlow\", \"flow\": {\"states\": [{\"refId\": \"start\", \"type\": \"menu\", \"name\": \"Main Menu\", \"transitions\": [{\"targetStateRefId\": \"transfer\"}]}, {\"refId\": \"transfer\", \"type\": \"transfer\", \"name\": \"Transfer Agent\", \"transitions\": []}]}}",
+  "expected": {
+    "min_score": 1,
+    "max_critical_issues": 8
+  }
+}

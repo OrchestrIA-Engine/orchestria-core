@@ -1,6 +1,7 @@
 import sys, os, json
 sys.path.insert(0, ".")
 from src.parsers.genesys_yaml_parser import GenesysYAMLParser
+from src.parsers.genesys_cloud_parser import GenesysCloudParser
 from src.agents.analyzer import IVRAnalyzer
 
 api_key = os.environ.get("ANTHROPIC_API_KEY")
