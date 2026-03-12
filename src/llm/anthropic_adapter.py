@@ -1,6 +1,7 @@
-import anthropic
 import os
+import anthropic
 from .base import LLMAdapter, Message, LLMConfig, LLMResponse
+
 
 class AnthropicAdapter(LLMAdapter):
     def __init__(self, api_key: str):
@@ -17,15 +18,12 @@ class AnthropicAdapter(LLMAdapter):
             pass
 
     def complete(self, messages: list[Message], config: LLMConfig) -> LLMResponse:
-        trace = None
-        generation = None
         if self.langfuse:
             try:
-                trace = self.langfuse.trace(name="orchestria_complete", metadata={"model": config.model})
-                generation = trace.generation(
-                    name="llm_call",
-                    model=config.model,
-                    input=[{"role": m.role, "content": m.content} for m in messages]
+                self.langfuse.create_event(
+                    name="llm_call_start",
+                    input=[{"role": m.role, "content": m.content} for m in messages],
+                    metadata={"model": config.model}
                 )
             except Exception:
                 pass
@@ -42,12 +40,18 @@ class AnthropicAdapter(LLMAdapter):
             output_tokens=response.usage.output_tokens
         )
 
-        if generation:
+        if self.langfuse:
             try:
-                generation.end(
+                self.langfuse.create_event(
+                    name="llm_call_end",
                     output=result.content,
-                    usage={"input": result.input_tokens, "output": result.output_tokens}
+                    metadata={
+                        "model": config.model,
+                        "input_tokens": result.input_tokens,
+                        "output_tokens": result.output_tokens
+                    }
                 )
+                self.langfuse.flush()
             except Exception:
                 pass
 
