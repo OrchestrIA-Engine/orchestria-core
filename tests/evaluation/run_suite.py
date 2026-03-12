@@ -4,9 +4,8 @@ from src.parsers.genesys_yaml_parser import GenesysYAMLParser
 from src.parsers.genesys_cloud_parser import GenesysCloudParser
 from src.agents.analyzer import IVRAnalyzer
 
-api_key = os.environ.get("ANTHROPIC_API_KEY")
 parser = GenesysYAMLParser()
-analyzer = IVRAnalyzer(api_key=api_key)
+analyzer = IVRAnalyzer()
 
 fixtures_dir = "tests/fixtures"
 casos = sorted([f for f in os.listdir(fixtures_dir) if f.endswith(".json")])
