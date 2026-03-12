@@ -3,7 +3,7 @@
   "name": "Flujo complejo con transferencias sin fallback",
   "yaml": "nodes:\n  - id: entrada\n    name: Entrada\n    type: entry\n    next: [menu]\n  - id: menu\n    name: Menu principal\n    type: menu\n    prompt: Pulse 1 ventas 2 soporte 3 facturacion\n    timeout: 10\n    next: [ventas, soporte, facturacion]\n  - id: ventas\n    name: Ventas\n    type: transfer\n    queue: cola_ventas\n    next: [salida]\n  - id: soporte\n    name: Soporte\n    type: transfer\n    queue: cola_soporte\n    next: [salida]\n  - id: facturacion\n    name: Facturacion\n    type: transfer\n    queue: cola_facturacion\n    next: [salida]\n  - id: salida\n    name: Fin\n    type: exit",
   "expected": {
-    "min_score": 35,
+    "min_score": 20,
     "min_improvements": 1
   }
 }

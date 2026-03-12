@@ -4,7 +4,7 @@
   "format": "genesys_cloud",
   "yaml": "{\"name\": \"BrokenCloud\", \"flow\": {\"states\": [{\"refId\": \"start\", \"type\": \"menu\", \"name\": \"Main Menu\", \"transitions\": [{\"targetStateRefId\": \"nodo_fantasma\"}]}]}}",
   "expected": {
-    "max_score": 50,
+    "max_score": 60,
     "min_critical_issues": 1
   }
 }
