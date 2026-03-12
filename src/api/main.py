@@ -36,6 +36,16 @@ def root():
 def health():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
+
+def detect_and_parse(content: str):
+    content = content.strip()
+    if content.startswith('{'):
+        from src.parsers.genesys_cloud_parser import GenesysCloudParser
+        return GenesysCloudParser().parse(content)
+    else:
+        from src.parsers.genesys_yaml_parser import GenesysYAMLParser
+        return detect_and_parse(content)
+
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze_flow(request: AnalyzeRequest):
     if not request.flow_yaml.strip():
