@@ -154,8 +154,35 @@ def parse_content(content, filename):
     return GenesysYAMLParser().parse(content, flow_name=filename.rsplit('.', 1)[0]), None
 
 def generar_pdf_bytes(flow, analysis):
+    # Enriquecer el analysis con drivers textuales del score
+    enriched = dict(analysis)
+    inv = enriched.get('inventory', {})
+    bd  = inv.get('migration_score_breakdown', {})
+    ml  = inv.get('migration_level', '')
+    
+    # Añadir drivers de migración como risk flags extra
+    mig_drivers = []
+    if inv.get('data_services'):
+        mig_drivers.append(f"APIs de datos: {', '.join(inv['data_services'])} — reconexión requerida en Cloud")
+    if inv.get('auth_services'):
+        mig_drivers.append(f"Auth services: {', '.join(inv['auth_services'])} — validar OAuth/SAML en Cloud")
+    if inv.get('dynamic_variables'):
+        mig_drivers.append(f"{len(inv['dynamic_variables'])} variable(s) TTS dinámica(s) — verificar runtime Cloud")
+    if not inv.get('entry_node_id'):
+        mig_drivers.append("Entry node no definido — prerequisito arquitectónico de la migración")
+    dead = inv.get('dead_ends', [])
+    if dead:
+        mig_drivers.append(f"{len(dead)} dead end(s) — requieren rediseño antes de migrar")
+    
+    # Fusionar con flags existentes sin duplicar
+    existing_flags = list(enriched.get('inventory', {}).get('migration_risk_flags', []))
+    all_flags = existing_flags + [d for d in mig_drivers if d not in existing_flags]
+    if 'inventory' in enriched:
+        enriched['inventory'] = dict(enriched['inventory'])
+        enriched['inventory']['migration_risk_flags'] = all_flags
+
     with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp: path = tmp.name
-    IVRDocumentor().generate_pdf(flow, analysis, path)
+    IVRDocumentor().generate_pdf(flow, enriched, path)
     with open(path, 'rb') as f: data = f.read()
     os.unlink(path); return data
 
@@ -901,21 +928,21 @@ def ivr_loading_panel(current: int, total: int, current_name: str = "", phases: 
         '<div style="background:#0B0D14;border:1px solid #1C2030;border-radius:12px;padding:1rem 1.25rem;">'
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">'
         '<span style="font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;letter-spacing:0.1em;">PROCESSING FLOW</span>'
-        + counter_html +
-        '</div>'
+        + counter_html
+        + '</div>'
         '<svg viewBox="0 0 360 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:80px;display:block;">'
-        + svg_e + svg_n +
-        '</svg>'
-        + (phases_html if phases_html else "")  +
-        '<div style="margin-top:0.6rem;">'
-        '<div style="display:flex;justify-content:space-between;font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;margin-bottom:3px;">'
-        '<span style="color:#E8EDF5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:78%%;">%s</span>'
-        '<span style="color:#00D4AA;">%d%%</span>'
-        '</div>'
-        '<div style="background:#0E1118;border-radius:2px;height:3px;">'
-        '<div style="background:linear-gradient(90deg,#00D4AA,#00A8FF);height:100%%;width:%d%%;border-radius:2px;transition:width 0.3s ease;"></div>'
-        '</div></div></div>'
-    ) % (fname_short, pct, pct)
+        + svg_e + svg_n
+        + '</svg>'
+        + (phases_html if phases_html else '')
+        + '<div style="margin-top:0.6rem;">'
+          '<div style="display:flex;justify-content:space-between;font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;margin-bottom:3px;">'
+          '<span style="color:#E8EDF5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:78%;">' + fname_short + '</span>'
+          '<span style="color:#00D4AA;">' + str(pct) + '%</span>'
+          '</div>'
+          '<div style="background:#0E1118;border-radius:2px;height:3px;">'
+          '<div style="background:linear-gradient(90deg,#00D4AA,#00A8FF);height:100%;width:' + str(pct) + '%;border-radius:2px;transition:width 0.3s ease;"></div>'
+          '</div></div></div>'
+    )
 
 
 def generar_portfolio_pdf(results, flows_map) -> bytes:
