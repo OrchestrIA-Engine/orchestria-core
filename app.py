@@ -24,7 +24,7 @@ with col2:
         else:
             parser = GenesysYAMLParser()
             flow = parser.parse(yaml_input, flow_name=flow_name)
-            analyzer = IVRAnalyzer(api_key=api_key)
+            analyzer = IVRAnalyzer()
             analysis = analyzer.analyze(flow)
             score = analysis.get('score', 0)
             if score >= 70:

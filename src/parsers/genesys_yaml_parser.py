@@ -1,71 +1,92 @@
-
 import yaml
 import uuid
-from typing import Any
-from src.models.ivr.flow_model import (
-    IVRFlow, IVRNode, FlowError, NodeType, Severity
-)
+from src.models.ivr.flow_model import IVRFlow, IVRNode, FlowError, NodeType, Severity
 
 GENESYS_TYPE_MAP = {
-    "menu": NodeType.MENU,
-    "prompt": NodeType.PROMPT,
-    "transfer": NodeType.TRANSFER,
-    "condition": NodeType.CONDITION,
-    "input": NodeType.INPUT,
-    "setVariable": NodeType.SET_VARIABLE,
-    "apiCall": NodeType.API_CALL,
-    "loop": NodeType.LOOP,
-    "switch": NodeType.SWITCH,
-    "callback": NodeType.CALLBACK,
-    "speech": NodeType.SPEECH,
-    "exit": NodeType.EXIT,
-    "entry": NodeType.ENTRY,
+    "menu": NodeType.MENU, "prompt": NodeType.PROMPT,
+    "transfer": NodeType.TRANSFER, "condition": NodeType.CONDITION,
+    "input": NodeType.INPUT, "setVariable": NodeType.SET_VARIABLE,
+    "apiCall": NodeType.API_CALL, "loop": NodeType.LOOP,
+    "switch": NodeType.SWITCH, "callback": NodeType.CALLBACK,
+    "speech": NodeType.SPEECH, "exit": NodeType.EXIT,
+    "entry": NodeType.ENTRY, "task": NodeType.MENU,
 }
 
 class GenesysYAMLParser:
-    def parse(self, yaml_content: str, flow_name: str = "Unnamed") -> IVRFlow:
+    def parse(self, yaml_content, flow_name="Unnamed"):
         flow = IVRFlow(flow_id=str(uuid.uuid4()), flow_name=flow_name, provider="genesys")
         try:
             data = yaml.safe_load(yaml_content)
-        except yaml.YAMLError as e:
-            flow.add_error(FlowError(error_type="invalid_yaml", severity=Severity.CRITICAL, affected_node_id="root", description=f"YAML invalido: {str(e)}", recommendation="Verificar sintaxis YAML"))
+        except Exception as e:
+            flow.add_error(FlowError(error_type="invalid_yaml", severity=Severity.CRITICAL, affected_node_id="root", description=str(e), recommendation="Verificar sintaxis YAML"))
             return flow
-        if not data:
-            flow.add_error(FlowError(error_type="empty_config", severity=Severity.CRITICAL, affected_node_id="root", description="YAML vacio", recommendation="Exportar de nuevo desde Genesys"))
+        if not data or not isinstance(data, dict):
+            flow.add_error(FlowError(error_type="empty_config", severity=Severity.CRITICAL, affected_node_id="root", description="YAML vacio", recommendation="Revisar contenido"))
             return flow
-        nodes_data = data.get("nodes", data.get("steps", data.get("actions", {})))
-        if isinstance(nodes_data, list):
-            for node_data in nodes_data:
-                flow.add_node(self._parse_node(node_data))
-        elif isinstance(nodes_data, dict):
-            for node_id, node_data in nodes_data.items():
+        for section in ["menus", "tasks", "transfers", "tasks_extra", "tasks_voicemail"]:
+            for node_id, node_data in data.get(section, {}).items():
                 if isinstance(node_data, dict):
                     node_data["id"] = node_id
+                    node_data["type"] = "transfer" if section == "transfers" else "menu"
                     flow.add_node(self._parse_node(node_data))
+        if not flow.nodes:
+            nodes_data = data.get("nodes", data.get("steps", data.get("actions", {})))
+            if isinstance(nodes_data, list):
+                for nd in nodes_data:
+                    flow.add_node(self._parse_node(nd))
+            elif isinstance(nodes_data, dict):
+                for nid, nd in nodes_data.items():
+                    if isinstance(nd, dict):
+                        nd["id"] = nid
+                        flow.add_node(self._parse_node(nd))
         self._validate_flow(flow)
         return flow
 
-    def _parse_node(self, data: dict) -> IVRNode:
-        node_id = str(data.get("id", uuid.uuid4()))
-        node_type_str = data.get("type", data.get("action", "unknown")).lower()
-        node_type = GENESYS_TYPE_MAP.get(node_type_str, NodeType.UNKNOWN)
-        next_nodes = []
-        if "next" in data:
-            next_val = data["next"]
-            next_nodes = [next_val] if isinstance(next_val, str) else [str(n) for n in next_val]
-        elif "transitions" in data:
-            next_nodes = [str(t.get("target", "")) for t in data["transitions"] if t.get("target")]
-        return IVRNode(id=node_id, name=data.get("name", f"Node {node_id}"), type=node_type, next_nodes=next_nodes, prompt_text=data.get("prompt", data.get("text")), timeout_seconds=data.get("timeout"), max_retries=data.get("maxRetries", data.get("retries")), transfer_target=data.get("target", data.get("queue")), variable_name=data.get("variable"), api_endpoint=data.get("url", data.get("endpoint")), raw_config=data)
+    def _ref(self, val):
+        if isinstance(val, str) and val:
+            return val.strip("./").split("/")[-1]
+        return None
 
-    def _validate_flow(self, flow: IVRFlow) -> None:
-        if not flow.entry_node_id:
-            flow.add_error(FlowError(error_type="missing_entry_node", severity=Severity.CRITICAL, affected_node_id="root", description="Sin nodo de entrada", recommendation="Añadir nodo tipo entry"))
+    def _extract_refs(self, data):
+        refs = []
+        r = self._ref(data.get("next"))
+        if r: refs.append(r)
+        for c in data.get("choices", []):
+            r = self._ref(c.get("next")) if isinstance(c, dict) else None
+            if r: refs.append(r)
+        for key in ["noInput","noMatch","onTimeout","onSuccess","onFailure","onComplete"]:
+            val = data.get(key, {})
+            if isinstance(val, dict):
+                r = self._ref(val.get("next"))
+                if r: refs.append(r)
+                sub = val.get("onMaxRetries", {})
+                if isinstance(sub, dict):
+                    r = self._ref(sub.get("next"))
+                    if r: refs.append(r)
+        for v in data.get("onInput", {}).values():
+            r = self._ref(v)
+            if r: refs.append(r)
+        return list(set(refs))
+
+    def _parse_node(self, data):
+        nid = str(data.get("id", uuid.uuid4()))
+        ntype = GENESYS_TYPE_MAP.get(data.get("type", "unknown").lower(), NodeType.UNKNOWN)
+        return IVRNode(id=nid, name=data.get("name", nid), type=ntype,
+            next_nodes=self._extract_refs(data),
+            prompt_text=data.get("tts", data.get("prompt", data.get("text"))),
+            timeout_seconds=data.get("timeout"), max_retries=data.get("maxRetries"),
+            transfer_target=data.get("queue", data.get("target")),
+            variable_name=data.get("variable"), api_endpoint=data.get("url"), raw_config=data)
+
+    def _validate_flow(self, flow):
         all_ids = set(flow.nodes.keys())
-        referenced_ids = set()
+        refs = set()
         for node in flow.nodes.values():
-            referenced_ids.update(node.next_nodes)
-        for ref in referenced_ids - all_ids:
-            flow.add_error(FlowError(error_type="broken_reference", severity=Severity.HIGH, affected_node_id=ref, description=f"Nodo {ref} referenciado pero no existe", recommendation=f"Verificar nodo {ref}"))
+            refs.update(node.next_nodes)
+        for ref in refs - all_ids:
+            flow.add_error(FlowError(error_type="broken_reference", severity=Severity.HIGH,
+                affected_node_id=ref, description="Nodo referenciado no existe: " + ref, recommendation="Verificar nodo"))
         for node in flow.nodes.values():
             if node.type != NodeType.EXIT and not node.next_nodes:
-                flow.add_error(FlowError(error_type="dead_end", severity=Severity.CRITICAL, affected_node_id=node.id, description=f"Nodo {node.name} sin salida", recommendation="Añadir transicion o marcar como EXIT"))
+                flow.add_error(FlowError(error_type="dead_end", severity=Severity.CRITICAL,
+                    affected_node_id=node.id, description="Nodo sin salida: " + node.name, recommendation="Añadir transicion"))
