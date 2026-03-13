@@ -4,6 +4,7 @@ import re
 from ..llm.base import Message, LLMConfig
 from ..llm.anthropic_adapter import AnthropicAdapter
 from ..models.ivr.flow_model import IVRFlow
+from src.agents.inventory import FlowInventoryExtractor
 
 SCORING_RUBRIC = """
 SCORING RUBRIC - 100 puntos totales. Evalua CADA dimension por separado:
@@ -114,6 +115,29 @@ El JSON debe tener exactamente esta estructura:
         result["tokens_used"] = {
             "input": response.input_tokens,
             "output": response.output_tokens
+        }
+        inv = FlowInventoryExtractor().extract(flow)
+        result["inventory"] = {
+            "total_nodes": inv.total_nodes,
+            "menu_nodes": inv.menu_nodes,
+            "transfer_nodes": inv.transfer_nodes,
+            "task_nodes": inv.task_nodes,
+            "exit_nodes": inv.exit_nes,
+            "self_service_exits": inv.self_service_exits,
+            "agent_transfers": inv.agent_transfers,
+            "self_service_ratio": inv.self_service_ratio,
+            "unique_queues": inv.unique_queues,
+            "tts_messages": inv.tts_messages,
+            "voicemail_nodes": inv.voicemail_nodes,
+            "dtmf_input_nodes": inv.dtmf_input_nodes,
+            "data_services": inv.data_services,
+            "auth_services": inv.auth_services,
+            "api_calls": inv.api_calls,
+            "dynamic_variables": inv.dynamic_variables,
+            "total_external_deps": inv.total_external_deps,
+            "migration_complexity_score": inv.migration_complexity_score,
+            "migration_level": inv.migration_level,
+            "migration_risk_flags": inv.migration_risk_flags,
         }
         return result
 
