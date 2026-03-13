@@ -1,8 +1,9 @@
 import streamlit as st
-import sys, os, json, time
+import sys, os, json, time, tempfile
 sys.path.insert(0, '.')
 from src.parsers.genesys_yaml_parser import GenesysYAMLParser
 from src.agents.analyzer import IVRAnalyzer
+from src.agents.documentor import IVRDocumentor
 
 st.set_page_config(page_title='OrchestrIA IVR·IA', layout='wide', page_icon='🎙️')
 
@@ -29,6 +30,16 @@ modo = st.radio('Modo', ['Flujo individual', 'Batch (multiples flujos)'],
                 horizontal=True, label_visibility='collapsed')
 st.divider()
 
+# ── SESSION STATE ─────────────────────────────────────────────────────────────
+if 'analysis' not in st.session_state:
+    st.session_state.analysis = None
+if 'flow' not in st.session_state:
+    st.session_state.flow = None
+if 'batch_results' not in st.session_state:
+    st.session_state.batch_results = []
+if 'batch_flows' not in st.session_state:
+    st.session_state.batch_flows = {}
+
 
 def parse_content(content, filename):
     ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'yaml'
@@ -53,13 +64,24 @@ def parse_content(content, filename):
     return parser.parse(content, flow_name=flow_name), None
 
 
+def generar_pdf_bytes(flow, analysis):
+    doc = IVRDocumentor()
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+        path = tmp.name
+    doc.generate_pdf(flow, analysis, path)
+    with open(path, 'rb') as f:
+        data = f.read()
+    os.unlink(path)
+    return data
+
+
 def mostrar_loading(placeholder):
     fases = [
-        ('Parseando estructura del flujo'),
-        ('Extrayendo inventario de nodos'),
-        ('Detectando dependencias externas'),
-        ('Analizando con IA · Genesys Expert Mode'),
-        ('Generando Migration Assessment'),
+        'Parseando estructura del flujo',
+        'Extrayendo inventario de nodos',
+        'Detectando dependencias externas',
+        'Analizando con IA · Genesys Expert Mode',
+        'Generando Migration Assessment',
     ]
     mensajes = [
         'Detectando dead ends...',
@@ -91,10 +113,10 @@ def mostrar_loading(placeholder):
         msg_slot.caption(mensajes[msg_idx % len(mensajes)])
         prog.progress((step + 1) / len(fases))
 
-    return update, len(fases)
+    return update
 
 
-def mostrar_resultado(analysis):
+def mostrar_resultado(analysis, flow=None, key_prefix=''):
     score = analysis.get('score', 0)
     summary = analysis.get('summary', '')
     issues = analysis.get('critical_issues', [])
@@ -106,12 +128,36 @@ def mostrar_resultado(analysis):
         color = '#3FB950' if score >= 70 else '#D29922' if score >= 40 else '#F85149'
         st.markdown(
             '<div style="text-align:center;padding:24px;background:#161B22;border:1px solid #30363D;border-radius:12px;">'
-            '<div style="color:#8B949E;font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;">Score de Calidad</div>'
+            '<div style="color:#8B949E;font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;">SCORE DE CALIDAD</div>'
             '<div class="score-big" style="color:' + color + '">' + str(score) + '</div>'
             '<div style="color:#8B949E;font-size:0.9rem;">/ 100</div>'
             '</div>',
             unsafe_allow_html=True
         )
+
+        if flow is not None:
+            st.markdown('')
+            pdf_key = 'pdf_bytes_' + key_prefix
+            if pdf_key not in st.session_state:
+                st.session_state[pdf_key] = None
+
+            if st.button('Generar PDF', key='btn_pdf_' + key_prefix, use_container_width=True):
+                with st.spinner('Generando informe ejecutivo...'):
+                    try:
+                        st.session_state[pdf_key] = generar_pdf_bytes(flow, analysis)
+                    except Exception as e:
+                        st.error('Error: ' + str(e))
+
+            if st.session_state[pdf_key] is not None:
+                st.download_button(
+                    label='Descargar PDF',
+                    data=st.session_state[pdf_key],
+                    file_name=(flow.flow_name + '_orchestria.pdf'),
+                    mime='application/pdf',
+                    key='dl_pdf_' + key_prefix,
+                    use_container_width=True
+                )
+
     with col_summary:
         st.markdown('**Resumen ejecutivo**')
         st.write(summary)
@@ -138,7 +184,6 @@ def mostrar_resultado(analysis):
 
         st.divider()
         st.subheader('Dependencias Externas')
-
         d1, d2, d3 = st.columns(3)
         with d1:
             st.markdown('**APIs de Datos**')
@@ -168,13 +213,17 @@ def mostrar_resultado(analysis):
 
         st.divider()
         st.subheader('Migration Assessment')
-
         ml = inv.get('migration_level', 'SIMPLE')
         ms = inv.get('migration_complexity_score', 0)
-        badge_class = {'SIMPLE': 'badge-simple', 'MODERADO': 'badge-moderado',
-                       'COMPLEJO': 'badge-complejo', 'MUY COMPLEJO': 'badge-muy'}.get(ml, 'badge-simple')
+        badge_class = {
+            'SIMPLE': 'badge-simple',
+            'MODERADO': 'badge-moderado',
+            'COMPLEJO': 'badge-complejo',
+            'MUY COMPLEJO': 'badge-muy'
+        }.get(ml, 'badge-simple')
         st.markdown(
-            '<span class="' + badge_class + '">' + ml + '</span> &nbsp; Complejidad de migracion: <strong>' + str(ms) + '/100</strong>',
+            '<span class="' + badge_class + '">' + ml + '</span>'
+            ' &nbsp; Complejidad de migracion: <strong>' + str(ms) + '/100</strong>',
             unsafe_allow_html=True
         )
         st.markdown('')
@@ -186,6 +235,7 @@ def mostrar_resultado(analysis):
             st.success('No se detectaron riesgos de migracion')
 
 
+# ── MODO INDIVIDUAL ───────────────────────────────────────────────────────────
 if modo == 'Flujo individual':
     col_l, col_r = st.columns(2)
     with col_l:
@@ -200,8 +250,10 @@ if modo == 'Flujo individual':
             height=320,
             placeholder='inboundCall:\n  name: "Mi Flujo"\n  ...'
         )
+
     with col_r:
         analizar = st.button('Analizar Flujo', type='primary', use_container_width=True)
+
         if analizar:
             content = ''
             filename = 'flujo.yaml'
@@ -215,7 +267,7 @@ if modo == 'Flujo individual':
                 st.stop()
 
             loading_slot = st.empty()
-            update_fn, n_fases = mostrar_loading(loading_slot)
+            update_fn = mostrar_loading(loading_slot)
 
             update_fn(0, 0)
             time.sleep(0.4)
@@ -237,8 +289,19 @@ if modo == 'Flujo individual':
             update_fn(4, 4)
             time.sleep(0.3)
             loading_slot.empty()
-            mostrar_resultado(analysis)
 
+            st.session_state.analysis = analysis
+            st.session_state.flow = flow
+            st.session_state.pdf_bytes_individual = None
+
+    if st.session_state.analysis is not None and modo == 'Flujo individual':
+        mostrar_resultado(
+            st.session_state.analysis,
+            flow=st.session_state.flow,
+            key_prefix='individual'
+        )
+
+# ── MODO BATCH ────────────────────────────────────────────────────────────────
 else:
     st.markdown('**Arrastra hasta 50 flujos** · Formatos: YAML, JSON, XML')
     uploaded_files = st.file_uploader(
@@ -255,12 +318,14 @@ else:
 
     if analizar_batch and uploaded_files:
         resultados = []
+        flows_map = {}
         progress_bar = st.progress(0)
         status_slot = st.empty()
         analyzer = IVRAnalyzer()
 
         for i, f in enumerate(uploaded_files[:50]):
-            status_slot.caption('Analizando ' + str(i + 1) + '/' + str(len(uploaded_files)) + ': ' + f.name)
+            status_slot.caption('Analizando ' + str(i + 1) + '/' +
+                                str(len(uploaded_files)) + ': ' + f.name)
             content = f.read().decode('utf-8')
             flow, err = parse_content(content, f.name)
             if err:
@@ -269,12 +334,19 @@ else:
                 analysis = analyzer.analyze(flow)
                 analysis['filename'] = f.name
                 resultados.append(analysis)
+                flows_map[f.name] = flow
             progress_bar.progress((i + 1) / len(uploaded_files))
 
         status_slot.empty()
         progress_bar.empty()
 
+        st.session_state.batch_results = resultados
+        st.session_state.batch_flows = flows_map
+
+    if st.session_state.batch_results:
         st.divider()
+        resultados = st.session_state.batch_results
+        flows_map = st.session_state.batch_flows
         st.subheader('Resultados del Portfolio · ' + str(len(resultados)) + ' flujos')
 
         resultados_ok = sorted(
@@ -283,12 +355,14 @@ else:
             reverse=True
         )
 
-        for r in resultados_ok:
+        for idx, r in enumerate(resultados_ok):
             score = r.get('score', 0)
-            color = 'verde' if score >= 70 else 'amarillo' if score >= 40 else 'rojo'
+            icon = '🟢' if score >= 70 else '🟡' if score >= 40 else '🔴'
             ml = r.get('inventory', {}).get('migration_level', '-')
-            with st.expander(r['filename'] + ' — Score: ' + str(score) + '/100 · Migracion: ' + ml):
-                mostrar_resultado(r)
+            label = icon + ' ' + r['filename'] + ' — Score: ' + str(score) + '/100 · Migracion: ' + ml
+            with st.expander(label):
+                flow_ref = flows_map.get(r['filename'])
+                mostrar_resultado(r, flow=flow_ref, key_prefix='batch_' + str(idx))
 
         for r in [x for x in resultados if 'error' in x]:
             st.error('Error en ' + r['filename'] + ': ' + r['error'])
