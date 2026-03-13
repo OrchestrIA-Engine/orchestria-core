@@ -122,7 +122,7 @@ El JSON debe tener exactamente esta estructura:
             "menu_nodes": inv.menu_nodes,
             "transfer_nodes": inv.transfer_nodes,
             "task_nodes": inv.task_nodes,
-            "exit_nodes": inv.exit_nes,
+            "exit_nodes": inv.exit_nodes,
             "self_service_exits": inv.self_service_exits,
             "agent_transfers": inv.agent_transfers,
             "self_service_ratio": inv.self_service_ratio,
