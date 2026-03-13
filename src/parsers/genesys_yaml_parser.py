@@ -69,11 +69,16 @@ class GenesysYAMLParser:
         for action in data.get("actions", []):
             if isinstance(action, dict):
                 refs.extend(self._extract_refs(action))
+        for action in data.get("actions", []):
+            if isinstance(action, dict):
+                refs.extend(self._extract_refs(action))
         return list(set(refs))
 
     def _parse_node(self, data):
         nid = str(data.get("id", uuid.uuid4()))
-        ntype = GENESYS_TYPE_MAP.get(data.get("type", "unknown").lower(), NodeType.UNKNOWN)
+        actions = data.get("actions", [])
+        is_exit = any(isinstance(a, dict) and a.get("type") == "disconnect" for a in actions)
+        ntype = NodeType.EXIT if is_exit else GENESYS_TYPE_MAP.get(data.get("type", "unknown").lower(), NodeType.UNKNOWN)
         return IVRNode(id=nid, name=data.get("name", nid), type=ntype,
             next_nodes=self._extract_refs(data),
             prompt_text=data.get("tts", data.get("prompt", data.get("text"))),
