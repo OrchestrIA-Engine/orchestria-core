@@ -13,10 +13,11 @@ Dimensiones (basadas en metodología de integradores Genesys certificados):
   Total                                100 pts
 
 Niveles:
-  SIMPLE       0–20   (~1–2 días de migración)
-  MODERADO    21–45   (~1 semana)
-  COMPLEJO    46–70   (~2–4 semanas)
-  MUY COMPLEJO 71–100 (~1–3 meses)
+  SIMPLE       0–20   (~1–2 días · flujo básico sin integraciones)
+  MODERADO    21–45   (~3–5 días · integraciones simples o flujo mediano)
+  COMPLEJO    46–70   (~8–15 días · múltiples APIs + auth + lógica avanzada)
+  MUY COMPLEJO 71–100 (~20–40 días · arquitectura compleja + integraciones críticas)
+  Fuente: metodología Cyara/TTEC Digital/PS Genesys. No son datos oficiales Genesys.
 """
 
 import re

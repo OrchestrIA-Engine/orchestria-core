@@ -358,6 +358,9 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
             bars_html += '</div>'
             st.markdown(bars_html, unsafe_allow_html=True)
 
+        # Migration hours estimate — sección destacada
+        st.markdown(migration_hours_card(inv), unsafe_allow_html=True)
+
         # Risk flags
         if flags:
             for f_ in flags:
@@ -545,7 +548,7 @@ def build_flow_sheet(wb, r, raw_yaml=None):
     # ── S1: NODE INVENTORY ────────────────────────────────────────────────────
     row=5
     row=section_header(ws,row,2,9,"§1 · NODE INVENTORY",TEAL)
-    row=table_header(ws,row,["Node ID","Name","Type","Next Nodes","TTS Prompt","Timeout","MaxRetries","Dead End?"])
+    row=table_header(ws,row,["Node ID","Name","Type","Next Nodes","TTS Prompt","Timeout","MaxRetries","Dead End?","Est. Hours"])
     nodes = inv.get("nodes_detail") or []
     if not nodes and raw_yaml:
         # Extraer nodos directamente del YAML raw
@@ -579,6 +582,7 @@ def build_flow_sheet(wb, r, raw_yaml=None):
                     "dead_end":is_dead
                 })
 
+    total_hours = 0
     if nodes:
         for idx,n in enumerate(nodes):
             if isinstance(n,dict):
@@ -587,11 +591,67 @@ def build_flow_sheet(wb, r, raw_yaml=None):
                       n.get("maxRetries","—"),n.get("dead_end","")]
             else:
                 vals=[str(n),"","","","","","",""]
+            # ── EST. HOURS — Metodología integrador certificado Genesys ──────────
+            # Basado en Cyara Cloud Migration Assurance + TTEC Digital + PS Genesys
+            # No son datos oficiales Genesys — ver disclaimer en footer del Excel
+            HOURS_BY_TYPE = {
+                "ENTRY":     0.5,  # Config DNIS + inicio de flujo
+                "MENU":      3.0,  # DTMF options + prompts + test (sin timeout = +1h)
+                "PROMPT":    1.0,  # Audio upload + TTS config
+                "SPEECH":    3.0,  # ASR + NLU mapping
+                "INPUT":     2.0,  # collectInput + validación
+                "CONDITION": 1.5,  # Lógica booleana + variables
+                "SWITCH":    1.5,  # Multi-branch logic
+                "SET_VARIABLE": 1.0, # Mapeo de variables
+                "LOOP":      2.0,  # Lógica iteración + test bucle
+                "CALLBACK":  4.0,  # Queue + callback scheduling
+                "TRANSFER":  4.0,  # Queue mapping + skills + horarios
+                "TASK":      3.0,  # Lógica interna sin integración
+                "VOICEMAIL": 3.0,  # Voicemail config + transcripción
+                "EXIT":      0.5,  # Disconnect action
+                "UNKNOWN":   2.0,  # Requiere revisión manual
+            }
+            ntype_upper = str(vals[2]).upper()
+            est_h = HOURS_BY_TYPE.get(ntype_upper, 2.0)
+            # Multiplicador: si el nodo tiene API/data dip → 8h (Data Action definition)
+            has_api = "api" in str(vals[3]).lower() or "core_banking" in str(vals[3]).lower()
+            if has_api:
+                est_h = 8.0
+            # Dead end → +1h de rediseño
+            if vals[7]:
+                est_h += 1.0
+            vals.append(est_h)
             colors=[TEXT,TEXT,BLUE,DIM,DIM,
                     RED if vals[5]=="—" else TEXT,
                     TEXT,
-                    RED if vals[7] else TEXT]
+                    RED if vals[7] else TEXT,
+                    TEAL]
             row=data_row(ws,row,vals,col_start=2,alt=idx%2==0,colors=colors)
+        # Total horas footer
+        ws.row_dimensions[row].height=20
+        ws.cell(row=row,column=2,value="TOTAL ESTIMATED MIGRATION HOURS")
+        ws.cell(row=row,column=2).font=Font(name="Arial",bold=True,size=9,color=WHITE)
+        ws.cell(row=row,column=2).fill=hf(SURFACE)
+        ws.merge_cells(f"B{row}:H{row}")
+        total_cell=ws.cell(row=row,column=10,value=f"=SUM(J6:J{row-1})")
+        total_cell.font=Font(name="Arial",bold=True,size=11,color=TEAL)
+        total_cell.fill=hf(SURFACE)
+        total_cell.alignment=Alignment(horizontal="center",vertical="center")
+        ws.cell(row=row,column=9,value="hrs")
+        ws.cell(row=row,column=9).font=Font(name="Arial",size=8,color=DIM)
+        ws.cell(row=row,column=9).fill=hf(SURFACE)
+        ws.cell(row=row,column=9).alignment=Alignment(horizontal="right",vertical="center")
+        row+=2
+        # Disclaimer
+        ws.merge_cells(f"B{row}:J{row}")
+        disc = ws.cell(row=row,column=2,
+            value="Estimaciones basadas en metodología de integrador certificado Genesys (Cyara/TTEC Digital/PS Genesys). "
+                  "No representan datos oficiales de Genesys. El esfuerzo real depende del entorno técnico del cliente.")
+        disc.font=Font(name="Arial",size=7,italic=True,color=DIM)
+        disc.fill=hf(BG)
+        disc.alignment=Alignment(wrap_text=True,vertical="center")
+        ws.row_dimensions[row].height=22
+        row+=1
     else:
         c=ws.cell(row=row,column=2,value="Node detail not available — run analysis to populate")
         c.font=Font(name="Arial",size=8,color=DIM,italic=True)
@@ -750,75 +810,592 @@ def generar_portfolio_excel_v2(results, raw_yamls=None):
 
 
 
+
 def ivr_loading_panel(current: int, total: int, current_name: str = "") -> str:
+    """
+    Panel de loading con grafo IVR animado.
+    Nodos más grandes, tipos coloreados, pulse en nodo activo.
+    """
     pct = int((current / max(total, 1)) * 100)
+
+    # Arquitectura del grafo — posiciones en % del viewport SVG
     nodes = [
-        {"id":"entry","x":50,"y":20,"type":"entry","label":"Entry"},
-        {"id":"menu1","x":25,"y":42,"type":"menu","label":"Menu"},
-        {"id":"menu2","x":75,"y":42,"type":"menu","label":"Menu"},
-        {"id":"task1","x":12,"y":65,"type":"task","label":"Task"},
-        {"id":"api1", "x":40,"y":65,"type":"api", "label":"API"},
-        {"id":"xfer1","x":72,"y":65,"type":"xfer","label":"Xfer"},
-        {"id":"exit1","x":28,"y":87,"type":"exit","label":"Exit"},
-        {"id":"exit2","x":60,"y":87,"type":"exit","label":"Exit"},
+        {"id":"entry",  "x":50,  "y":12,  "type":"ENTRY",    "label":"ENTRY",    "r":7},
+        {"id":"menu1",  "x":25,  "y":32,  "type":"MENU",     "label":"MENU",     "r":6},
+        {"id":"menu2",  "x":75,  "y":32,  "type":"MENU",     "label":"MENU",     "r":6},
+        {"id":"task1",  "x":12,  "y":55,  "type":"TASK",     "label":"TASK",     "r":5},
+        {"id":"api1",   "x":38,  "y":55,  "type":"API",      "label":"API",      "r":5},
+        {"id":"auth1",  "x":62,  "y":55,  "type":"AUTH",     "label":"AUTH",     "r":5},
+        {"id":"xfer1",  "x":85,  "y":55,  "type":"TRANSFER", "label":"XFER",     "r":5},
+        {"id":"exit1",  "x":25,  "y":78,  "type":"EXIT",     "label":"EXIT",     "r":4},
+        {"id":"exit2",  "x":60,  "y":78,  "type":"EXIT",     "label":"EXIT",     "r":4},
+        {"id":"tts1",   "x":42,  "y":90,  "type":"TTS",      "label":"TTS",      "r":4},
     ]
     edges = [
         ("entry","menu1"),("entry","menu2"),
         ("menu1","task1"),("menu1","api1"),
-        ("menu2","api1"),("menu2","xfer1"),
-        ("task1","exit1"),("api1","exit1"),("xfer1","exit2"),
+        ("menu2","auth1"),("menu2","xfer1"),
+        ("task1","exit1"),("api1","tts1"),
+        ("auth1","exit2"),("xfer1","exit2"),
     ]
-    lit = max(1, int(len(nodes) * pct / 100))
-    node_colors = {
-        "entry":"#00D4AA","menu":"#00A8FF","task":"#A78BFA",
-        "api":"#F0883E","xfer":"#00D4AA","exit":"#4B5568"
+    colors = {
+        "ENTRY":    "#00D4AA",
+        "MENU":     "#00A8FF",
+        "TASK":     "#A78BFA",
+        "API":      "#F0883E",
+        "AUTH":     "#F85149",
+        "TRANSFER": "#00D4AA",
+        "EXIT":     "#3FB950",
+        "TTS":      "#D29922",
     }
-    W, H = 300, 130
+
+    W, H = 340, 110
+    lit = max(1, int(len(nodes) * pct / 100))
+
     svg_edges = ""
     for (a, b) in edges:
         n1 = next(n for n in nodes if n["id"] == a)
         n2 = next(n for n in nodes if n["id"] == b)
-        x1 = int(n1["x"] * W / 100)
-        y1 = int(n1["y"] * H / 100)
-        x2 = int(n2["x"] * W / 100)
-        y2 = int(n2["y"] * H / 100)
-        svg_edges += ('<line x1="%d" y1="%d" x2="%d" y2="%d" '
-                      'stroke="#1C2030" stroke-width="1.5"/>' % (x1, y1, x2, y2))
+        x1, y1 = int(n1["x"] * W / 100), int(n1["y"] * H / 100)
+        x2, y2 = int(n2["x"] * W / 100), int(n2["y"] * H / 100)
+        # Edge iluminado si ambos nodos están lit
+        i1 = next(i for i,n in enumerate(nodes) if n["id"]==a)
+        i2 = next(i for i,n in enumerate(nodes) if n["id"]==b)
+        edge_lit = (i1 < lit and i2 < lit)
+        c = colors.get(n2["type"], "#4B5568")
+        stroke = c if edge_lit else "#1C2030"
+        opacity = "0.7" if edge_lit else "1"
+        svg_edges += (
+            '<line x1="%d" y1="%d" x2="%d" y2="%d" '            'stroke="%s" stroke-width="1.2" opacity="%s"/>'        ) % (x1, y1, x2, y2, stroke, opacity)
+
     svg_nodes = ""
     for i, n in enumerate(nodes):
-        cx = int(n["x"] * W / 100)
-        cy = int(n["y"] * H / 100)
-        color = node_colors.get(n["type"], "#4B5568")
-        is_lit = i < lit
+        cx  = int(n["x"] * W / 100)
+        cy  = int(n["y"] * H / 100)
+        r   = n["r"]
+        col = colors.get(n["type"], "#4B5568")
+        is_lit     = i < lit
         is_current = i == lit - 1
-        opacity = "1" if is_lit else "0.2"
-        glow = ('filter:drop-shadow(0 0 6px %s);' % color) if is_current else ""
-        pulse = ('<animate attributeName="r" values="6;9;6" dur="0.7s" repeatCount="indefinite"/>') if is_current else ""
+        opacity    = "1" if is_lit else "0.15"
+
+        if is_current:
+            # Ring exterior + pulse
+            svg_nodes += (
+                '<circle cx="%d" cy="%d" r="%d" fill="none" stroke="%s" '                'stroke-width="1.5" opacity="0.4">'                '<animate attributeName="r" values="%d;%d;%d" dur="0.9s" '                'repeatCount="indefinite"/>'                '<animate attributeName="opacity" values="0.4;0;0.4" dur="0.9s" '                'repeatCount="indefinite"/>'                '</circle>'            ) % (cx, cy, r+4, col, r+4, r+8, r+4)
+            svg_nodes += (
+                '<circle cx="%d" cy="%d" r="%d" fill="%s" opacity="1" '                'filter="drop-shadow(0 0 5px %s)"/>'            ) % (cx, cy, r, col, col)
+        else:
+            svg_nodes += '<circle cx="%d" cy="%d" r="%d" fill="%s" opacity="%s"/>'                          % (cx, cy, r, col, opacity)
+
+        # Label
+        label_y = cy + r + 9
         svg_nodes += (
-            '<circle cx="%d" cy="%d" r="6" fill="%s" opacity="%s" style="%s">%s</circle>'
-            '<text x="%d" y="%d" text-anchor="middle" fill="%s" opacity="%s" '
-            'font-family="DM Mono,monospace" font-size="7">%s</text>'
-        ) % (cx, cy, color, opacity, glow, pulse,
-             cx, cy + 17, color, opacity, n["label"])
-    fname_short = current_name.replace(".yaml", "").replace(".yml", "")[:30]
-    bar_w = pct
-    html = (
-        '''<div style="background:#0B0D14;border:1px solid #1C2030;border-radius:10px;padding:1.1rem 1.4rem;margin-top:0.6rem;">'''
-        '''<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">'''
-        '''<span style="font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;letter-spacing:0.08em;">ANALYZING PORTFOLIO</span>'''
-        '''<span style="font-family:Syne,sans-serif;font-size:1rem;font-weight:800;color:#00D4AA;">%d/%d</span>'''
-        '''</div>'''
-        '''<svg viewBox="0 0 300 130" xmlns="http://www.w3.org/2000/svg" style="width:100%%;height:90px;display:block;">%s%s</svg>'''
-        '''<div style="margin-top:0.6rem;">'''
-        '''<div style="display:flex;justify-content:space-between;font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;margin-bottom:4px;">'''
-        '''<span style="color:#E8EDF5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72%%;">%s</span>'''
-        '''<span style="color:#00D4AA;">%d%%</span>'''
-        '''</div>'''
-        '''<div style="background:#1C2030;border-radius:2px;height:3px;overflow:hidden;">'''
-        '''<div style="background:linear-gradient(90deg,#00D4AA,#00A8FF);height:100%%;width:%d%%;border-radius:2px;"></div>'''
-        '''</div></div></div>'''
-    ) % (current, total, svg_edges, svg_nodes, fname_short, pct, bar_w)
-    return html
+            '<text x="%d" y="%d" text-anchor="middle" fill="%s" opacity="%s" '            'font-family="DM Mono,monospace" font-size="6" font-weight="600">%s</text>'        ) % (cx, label_y, col, opacity, n["label"])
+
+    fname_short = current_name.replace(".yaml","").replace(".yml","")[:32]
+
+    return (
+        '<div style="background:#0B0D14;border:1px solid #1C2030;border-radius:10px;'        'padding:1rem 1.25rem;margin-top:0.6rem;">'        '<div style="display:flex;justify-content:space-between;'        'align-items:center;margin-bottom:0.5rem;">'        '<span style="font-family:DM Mono,monospace;font-size:0.6rem;'        'color:#4B5568;letter-spacing:0.1em;">ANALYZING PORTFOLIO</span>'        '<span style="font-family:Syne,sans-serif;font-size:1.1rem;'        'font-weight:800;color:#00D4AA;">%d/%d</span>'        '</div>'        '<svg viewBox="0 0 340 130" xmlns="http://www.w3.org/2000/svg" '        'style="width:100%%;height:95px;display:block;">%s%s</svg>'        '<div style="margin-top:0.5rem;">'        '<div style="display:flex;justify-content:space-between;'        'font-family:DM Mono,monospace;font-size:0.6rem;'        'color:#4B5568;margin-bottom:3px;">'        '<span style="color:#E8EDF5;overflow:hidden;text-overflow:ellipsis;'        'white-space:nowrap;max-width:75%%;">%s</span>'        '<span style="color:#00D4AA;">%d%%</span>'        '</div>'        '<div style="background:#0E1118;border-radius:2px;height:3px;">'        '<div style="background:linear-gradient(90deg,#00D4AA,#00A8FF);'        'height:100%%;width:%d%%;border-radius:2px;"></div>'        '</div></div></div>'
+    ) % (current, total, svg_edges, svg_nodes, fname_short, pct, pct)
+
+
+def generar_portfolio_pdf(results, flows_map) -> bytes:
+    """PDF consolidado: portada portfolio + 1 página por flujo."""
+    import io, json, re, os
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.colors import HexColor
+    from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                    Table, TableStyle, HRFlowable, PageBreak)
+    from reportlab.lib.units import cm
+    from datetime import datetime
+
+    # ── PALETA ────────────────────────────────────────────────────────────────
+    navy    = HexColor('#1E3A5F')
+    teal    = HexColor('#00D4AA')
+    blue    = HexColor('#00A8FF')
+    accent  = HexColor('#00D4AA')
+    red     = HexColor('#F85149')
+    orange  = HexColor('#F0883E')
+    green   = HexColor('#3FB950')
+    yellow  = HexColor('#D29922')
+    white   = HexColor('#FFFFFF')
+    light   = HexColor('#F8FAFC')
+    border  = HexColor('#E2E8F0')
+    dim     = HexColor('#64748B')
+    dark    = HexColor('#1E293B')
+
+    def score_color(s):
+        return green if s >= 70 else (orange if s >= 40 else red)
+    def mig_color(l):
+        return {"SIMPLE":green,"MODERADO":yellow,"COMPLEJO":orange,"MUY COMPLEJO":red}.get(l, dim)
+    def mig_bg(l):
+        return {"SIMPLE":HexColor('#D1FAE5'),"MODERADO":HexColor('#FEF3C7'),
+                "COMPLEJO":HexColor('#FFEDD5'),"MUY COMPLEJO":HexColor('#FEE2E2')}.get(l, light)
+
+    # ── ESTILOS ───────────────────────────────────────────────────────────────
+    brand  = ParagraphStyle('Brand', fontSize=9,  textColor=teal, fontName='Helvetica-Bold', spaceAfter=3)
+    h1     = ParagraphStyle('H1',    fontSize=22, textColor=navy, fontName='Helvetica-Bold', spaceAfter=6)
+    h2     = ParagraphStyle('H2',    fontSize=14, textColor=navy, fontName='Helvetica-Bold', spaceAfter=8,  spaceBefore=18)
+    h3     = ParagraphStyle('H3',    fontSize=11, textColor=navy, fontName='Helvetica-Bold', spaceAfter=5,  spaceBefore=10)
+    sub    = ParagraphStyle('Sub',   fontSize=10, textColor=dim,  spaceAfter=14)
+    body   = ParagraphStyle('Body',  fontSize=9,  textColor=dark, spaceAfter=5,  leading=15)
+    footer = ParagraphStyle('Foot',  fontSize=7,  textColor=dim,  alignment=1)
+    small  = ParagraphStyle('Small', fontSize=8,  textColor=dim,  spaceAfter=3)
+
+    ok = sorted([r for r in results if 'error' not in r],
+                key=lambda x: x.get('score', 0), reverse=True)
+    today = datetime.now().strftime('%d/%m/%Y')
+    now   = datetime.now().strftime('%d/%m/%Y %H:%M')
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=2*cm, rightMargin=2*cm,
+                            topMargin=2*cm, bottomMargin=2*cm)
+    story = []
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # PÁGINA 1 — PORTADA DEL PORTFOLIO
+    # ══════════════════════════════════════════════════════════════════════════
+    story.append(Paragraph('OrchestrIA · IVR·IA', brand))
+    story.append(Paragraph('Portfolio Analysis Report', h1))
+    story.append(Paragraph(f'{len(ok)} flows analyzed  ·  {today}', sub))
+    story.append(HRFlowable(width='100%', thickness=1, color=border, spaceAfter=14))
+
+    # Tabla resumen portfolio
+    avg_score = round(sum(r.get('score',0) for r in ok) / max(len(ok),1))
+    levels = [r.get('inventory',{}).get('migration_level','—') for r in ok]
+    level_counts = {l: levels.count(l) for l in set(levels)}
+
+    summary_data = [
+        ['Métrica', 'Valor'],
+        ['Flows analizados', str(len(ok))],
+        ['Score promedio', f'{avg_score}/100'],
+        ['Flows con score ≥ 70 (GOOD)', str(sum(1 for r in ok if r.get('score',0) >= 70))],
+        ['Flows con score < 40 (POOR)', str(sum(1 for r in ok if r.get('score',0) < 40))],
+        ['Distribución de complejidad', '  ·  '.join(f'{v} {k}' for k,v in level_counts.items())],
+    ]
+    t = Table(summary_data, colWidths=[9*cm, 6*cm])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), navy),
+        ('TEXTCOLOR',  (0,0), (-1,0), white),
+        ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME',   (0,1), (0,-1), 'Helvetica-Bold'),
+        ('FONTSIZE',   (0,0), (-1,-1), 9),
+        ('PADDING',    (0,0), (-1,-1), 8),
+        ('GRID',       (0,0), (-1,-1), 0.5, border),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [light, white]),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 0.5*cm))
+
+    # Ranking de flows
+    story.append(Paragraph('Ranking de Flujos por Score de Calidad', h2))
+    rank_data = [['#', 'Flujo', 'Score', 'Calidad', 'Nodos', 'Ext.Deps', 'Migración', 'Mig.Score']]
+    for i, r in enumerate(ok, 1):
+        inv = r.get('inventory', {})
+        s   = r.get('score', 0)
+        ml  = inv.get('migration_level', '—')
+        ql  = 'GOOD' if s >= 70 else ('FAIR' if s >= 40 else 'POOR')
+        rank_data.append([
+            str(i),
+            r['filename'].replace('.yaml','').replace('.yml','')[:30],
+            f'{s}/100', ql,
+            str(inv.get('total_nodes', 0)),
+            str(inv.get('total_external_deps', 0)),
+            ml,
+            str(inv.get('migration_complexity_score', 0)),
+        ])
+    rt = Table(rank_data, colWidths=[0.6*cm,5.5*cm,1.5*cm,1.5*cm,1.2*cm,1.5*cm,2.5*cm,1.8*cm])
+    tstyle = [
+        ('BACKGROUND', (0,0), (-1,0), navy),
+        ('TEXTCOLOR',  (0,0), (-1,0), white),
+        ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE',   (0,0), (-1,-1), 8),
+        ('PADDING',    (0,0), (-1,-1), 5),
+        ('GRID',       (0,0), (-1,-1), 0.3, border),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [light, white]),
+        ('ALIGN',      (2,0), (-1,-1), 'CENTER'),
+    ]
+    # Color semafórico en columna Score
+    for i, r in enumerate(ok, 1):
+        s  = r.get('score', 0)
+        ml = r.get('inventory',{}).get('migration_level','—')
+        tstyle.append(('TEXTCOLOR', (2,i), (2,i), score_color(s)))
+        tstyle.append(('FONTNAME',  (2,i), (2,i), 'Helvetica-Bold'))
+        tstyle.append(('TEXTCOLOR', (6,i), (6,i), mig_color(ml)))
+    rt.setStyle(TableStyle(tstyle))
+    story.append(rt)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # PÁGINAS INDIVIDUALES — UNA POR FLUJO
+    # ══════════════════════════════════════════════════════════════════════════
+    for r in ok:
+        story.append(PageBreak())
+        inv   = r.get('inventory', {})
+        score = r.get('score', 0)
+        ml    = inv.get('migration_level', '—')
+        ms    = inv.get('migration_complexity_score', 0)
+        fname = r['filename'].replace('.yaml','').replace('.yml','')
+
+        # Cabecera del flujo
+        story.append(Paragraph('OrchestrIA · IVR·IA', brand))
+        story.append(Paragraph(f'Informe de Auditoría de Flujo IVR', h1))
+        story.append(Paragraph(f'{fname}  ·  {today}', sub))
+        story.append(HRFlowable(width='100%', thickness=1, color=border, spaceAfter=12))
+
+        # Tabla métricas
+        metrics = [
+            ['Métrica', 'Valor', 'Métrica', 'Valor'],
+            ['Score de Calidad', f'{score}/100', 'Total Nodos', str(inv.get('total_nodes',0))],
+            ['Self-Service Ratio', f"{inv.get('self_service_ratio',0)}%",
+             'Transfers a Agente', str(inv.get('agent_transfers',0))],
+            ['Deps. Externas', str(inv.get('total_external_deps',0)),
+             'Complejidad Migración', ml],
+            ['APIs de Datos', str(len(inv.get('data_services',[]))),
+             'Servicios de Auth', str(len(inv.get('auth_services',[])))],
+        ]
+        mt = Table(metrics, colWidths=[4.5*cm, 3*cm, 4.5*cm, 3*cm])
+        mt.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), navy),
+            ('TEXTCOLOR',  (0,0), (-1,0), white),
+            ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTNAME',   (0,1), (0,-1), 'Helvetica-Bold'),
+            ('FONTNAME',   (2,1), (2,-1), 'Helvetica-Bold'),
+            ('FONTSIZE',   (0,0), (-1,-1), 9),
+            ('PADDING',    (0,0), (-1,-1), 7),
+            ('GRID',       (0,0), (-1,-1), 0.4, border),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [light, white]),
+            ('TEXTCOLOR',  (1,1), (1,1), score_color(score)),
+            ('FONTNAME',   (1,1), (1,1), 'Helvetica-Bold'),
+            ('TEXTCOLOR',  (3,3), (3,3), mig_color(ml)),
+            ('FONTNAME',   (3,3), (3,3), 'Helvetica-Bold'),
+        ]))
+        story.append(mt)
+
+        # Inventario
+        story.append(Paragraph('Inventario del Flujo', h2))
+        inv_rows = [['Componente', 'Detalle']]
+        if inv.get('data_services'):
+            inv_rows.append(['APIs de Datos', ', '.join(inv['data_services'])])
+        if inv.get('auth_services'):
+            inv_rows.append(['Servicios de Auth', ', '.join(inv['auth_services'])])
+        if inv.get('unique_queues'):
+            inv_rows.append(['Colas de Destino', ', '.join(inv['unique_queues'])])
+        if inv.get('dynamic_variables'):
+            inv_rows.append(['Variables TTS', ', '.join('{'+v+'}' for v in inv['dynamic_variables'])])
+        inv_rows.append(['Menú / Transfer / Logic',
+                         f"{inv.get('menu_nodes',0)} / {inv.get('transfer_nodes',0)} / {inv.get('task_nodes',0)}"])
+        it = Table(inv_rows, colWidths=[5*cm, 10*cm])
+        it.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), navy),
+            ('TEXTCOLOR',  (0,0), (-1,0), white),
+            ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTNAME',   (0,1), (0,-1), 'Helvetica-Bold'),
+            ('FONTSIZE',   (0,0), (-1,-1), 8),
+            ('PADDING',    (0,0), (-1,-1), 6),
+            ('GRID',       (0,0), (-1,-1), 0.4, border),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [light, white]),
+        ]))
+        story.append(it)
+
+        # Resumen ejecutivo
+        summary = r.get('summary') or r.get('executive_summary') or ''
+        if summary:
+            story.append(Paragraph('Resumen Ejecutivo', h2))
+            story.append(Paragraph(summary, body))
+
+        # Hallazgos
+        findings = r.get('critical_issues') or []
+        if findings:
+            story.append(Paragraph('Hallazgos Principales', h2))
+            for i, f in enumerate(findings, 1):
+                story.append(Paragraph(f'{i}. {f}', body))
+
+        # Recomendaciones
+        recs = r.get('improvements') or r.get('recommendations') or []
+        if recs:
+            story.append(Paragraph('Plan de Acción', h2))
+            for i, rec in enumerate(recs, 1):
+                story.append(Paragraph(f'Paso {i}: {rec}', body))
+
+        # Migration Assessment
+        story.append(Paragraph('Migration Assessment · Genesys Cloud', h2))
+        story.append(Paragraph(f'Nivel de complejidad: {ml} ({ms}/100)', h3))
+        flags = inv.get('migration_risk_flags') or []
+        if flags:
+            story.append(Paragraph('Riesgos identificados:', small))
+            for flag in flags:
+                story.append(Paragraph(f'• {flag}', body))
+
+        # Footer
+        story.append(Spacer(1, 0.5*cm))
+        story.append(HRFlowable(width='100%', thickness=0.5, color=border, spaceAfter=6))
+        story.append(Paragraph(
+            f'Informe generado por OrchestrIA IVR·IA · {now} · Confidencial',
+            footer))
+
+    doc.build(story)
+    buf.seek(0)
+    return buf.getvalue()
+
+
+
+def calcular_horas_estimadas(inv: dict) -> dict:
+    """
+    Estima horas de migración desde el inventory dict.
+    Basado en metodología Cyara/TTEC Digital/PS Genesys.
+    Devuelve dict con breakdown por categoría y total.
+    """
+    # Horas base por tipo de nodo (conteos del inventory)
+    menu_h    = inv.get('menu_nodes',      0) * 3.0
+    xfer_h    = inv.get('transfer_nodes',  0) * 4.0
+    logic_h   = inv.get('task_nodes',      0) * 3.0
+    voice_h   = len(inv.get('voicemail_nodes', [])) * 3.0
+
+    # APIs/integraciones — 8h por data service, 4h por auth
+    api_h     = len(inv.get('data_services',  [])) * 8.0
+    auth_h    = len(inv.get('auth_services',  [])) * 4.0
+
+    # Testing — variable dinámicas TTS requieren validación en Cloud runtime
+    tts_h     = len(inv.get('dynamic_variables', [])) * 1.0
+
+    # Riesgo: dead ends y fallbacks faltantes requieren rediseño
+    risk_h    = (len(inv.get('dead_ends',         [])) +
+                 len(inv.get('missing_fallbacks',  []))) * 1.0
+
+    # Entry node faltante: +2h arquitectura de entrada
+    entry_h   = 2.0 if not inv.get('entry_node_id') else 0.0
+
+    # Categorías agrupadas
+    routing_h     = menu_h + xfer_h + voice_h
+    integration_h = api_h + auth_h + tts_h
+    testing_h     = max(logic_h + risk_h + entry_h, 2.0)  # min 2h de testing
+
+    total = routing_h + integration_h + testing_h
+    days  = round(total / 8, 1)  # 8h/día de trabajo
+
+    return {
+        'routing_hours':     round(routing_h, 1),
+        'integration_hours': round(integration_h, 1),
+        'testing_hours':     round(testing_h, 1),
+        'total_hours':       round(total, 1),
+        'days_estimate':     days,
+    }
+
+
+def migration_hours_card(inv: dict, compact: bool = False) -> str:
+    """
+    Card HTML con estimación de horas de migración.
+    compact=True para uso en batch expanders.
+    """
+    h = calcular_horas_estimadas(inv)
+    total  = h['total_hours']
+    days   = h['days_estimate']
+    ml     = inv.get('migration_level', 'SIMPLE')
+
+    ml_color = {
+        'SIMPLE':      '#00D4AA',
+        'MODERADO':    '#D29922',
+        'COMPLEJO':    '#F0883E',
+        'MUY COMPLEJO':'#F85149',
+    }.get(ml, '#4B5568')
+
+    if compact:
+        return (
+            f'''<div style="display:flex;align-items:center;gap:1rem;
+                 background:#0B0D14;border:1px solid #1C2030;border-radius:8px;
+                 padding:0.6rem 1rem;margin-top:0.5rem;">
+              <div>
+                <div style="font-family:DM Mono,monospace;font-size:0.55rem;
+                     color:#4B5568;letter-spacing:0.08em;">EST. MIGRATION</div>
+                <div style="font-family:Syne,sans-serif;font-weight:800;
+                     font-size:1.4rem;color:{ml_color};line-height:1;">
+                  {total}h
+                </div>
+                <div style="font-family:DM Mono,monospace;font-size:0.6rem;
+                     color:#4B5568;">~{days} days</div>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                <div style="display:flex;justify-content:space-between;
+                     font-family:DM Mono,monospace;font-size:0.6rem;">
+                  <span style="color:#4B5568;">Routing</span>
+                  <span style="color:#00A8FF;">{h["routing_hours"]}h</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;
+                     font-family:DM Mono,monospace;font-size:0.6rem;">
+                  <span style="color:#4B5568;">Integration</span>
+                  <span style="color:#F0883E;">{h["integration_hours"]}h</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;
+                     font-family:DM Mono,monospace;font-size:0.6rem;">
+                  <span style="color:#4B5568;">Testing & Risk</span>
+                  <span style="color:#A78BFA;">{h["testing_hours"]}h</span>
+                </div>
+              </div>
+            </div>'''
+        )
+
+    bar_total = max(total, 1)
+    r_pct = round(h["routing_hours"]     / bar_total * 100)
+    i_pct = round(h["integration_hours"] / bar_total * 100)
+    t_pct = 100 - r_pct - i_pct
+
+    disclaimer = (
+        '<div style="font-family:DM Mono,monospace;font-size:0.55rem;color:#2A3545;'        'margin-top:0.75rem;line-height:1.5;">'        'Estimación basada en metodología Cyara · TTEC Digital · PS Genesys. '        'No representa datos oficiales de Genesys Systems Inc.</div>'
+    )
+
+    return f'''
+<div style="background:#0B0D14;border:1px solid #1C2030;border-radius:10px;
+     padding:1.25rem 1.5rem;margin-top:0.5rem;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;
+       margin-bottom:1rem;">
+    <div>
+      <div style="font-family:DM Mono,monospace;font-size:0.6rem;
+           color:#4B5568;letter-spacing:0.08em;margin-bottom:4px;">
+        MIGRATION EFFORT ESTIMATE · ENGAGE → CLOUD
+      </div>
+      <div style="display:flex;align-items:baseline;gap:0.5rem;">
+        <span style="font-family:Syne,sans-serif;font-weight:800;
+              font-size:2.2rem;color:{ml_color};line-height:1;">{total}h</span>
+        <span style="font-family:DM Mono,monospace;font-size:0.75rem;
+              color:#4B5568;">~{days} working days</span>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;
+           color:#4B5568;margin-bottom:4px;">COMPLEXITY</div>
+      <div style="font-family:Syne,sans-serif;font-weight:800;
+           font-size:0.85rem;color:{ml_color};">{ml}</div>
+    </div>
+  </div>
+
+  <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;
+       margin-bottom:0.75rem;gap:2px;">
+    <div style="width:{r_pct}%;background:#00A8FF;border-radius:3px 0 0 3px;"></div>
+    <div style="width:{i_pct}%;background:#F0883E;"></div>
+    <div style="width:{t_pct}%;background:#A78BFA;border-radius:0 3px 3px 0;"></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;">
+    <div style="background:#0E1118;border-radius:6px;padding:0.5rem 0.75rem;">
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;
+           color:#4B5568;margin-bottom:2px;">ROUTING</div>
+      <div style="font-family:Syne,sans-serif;font-weight:700;
+           font-size:1.1rem;color:#00A8FF;">{h["routing_hours"]}h</div>
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;color:#4B5568;">
+        menus · transfers · voicemail
+      </div>
+    </div>
+    <div style="background:#0E1118;border-radius:6px;padding:0.5rem 0.75rem;">
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;
+           color:#4B5568;margin-bottom:2px;">INTEGRATION</div>
+      <div style="font-family:Syne,sans-serif;font-weight:700;
+           font-size:1.1rem;color:#F0883E;">{h["integration_hours"]}h</div>
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;color:#4B5568;">
+        APIs · auth · TTS vars
+      </div>
+    </div>
+    <div style="background:#0E1118;border-radius:6px;padding:0.5rem 0.75rem;">
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;
+           color:#4B5568;margin-bottom:2px;">TESTING & RISK</div>
+      <div style="font-family:Syne,sans-serif;font-weight:700;
+           font-size:1.1rem;color:#A78BFA;">{h["testing_hours"]}h</div>
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;color:#4B5568;">
+        logic · dead ends · fixes
+      </div>
+    </div>
+  </div>
+  {disclaimer}
+</div>
+'''
+
+
+def portfolio_summary_card(results: list) -> str:
+    """Card de resumen del portfolio con total de horas de migración."""
+    ok = [r for r in results if 'error' not in r]
+    if not ok:
+        return ''
+
+    total_h = 0.0
+    total_days = 0.0
+    scores = []
+    levels = []
+    for r in ok:
+        inv = r.get('inventory', {})
+        h = calcular_horas_estimadas(inv)
+        total_h += h['total_hours']
+        scores.append(r.get('score', 0))
+        levels.append(inv.get('migration_level', 'SIMPLE'))
+
+    total_days = round(total_h / 8, 1)
+    avg_score  = round(sum(scores) / len(scores)) if scores else 0
+    level_counts = {l: levels.count(l) for l in ['SIMPLE','MODERADO','COMPLEJO','MUY COMPLEJO']}
+    sc = '#00D4AA' if avg_score >= 70 else ('#D29922' if avg_score >= 40 else '#F85149')
+
+    level_pills = ''
+    lc_colors = {'SIMPLE':'#00D4AA','MODERADO':'#D29922','COMPLEJO':'#F0883E','MUY COMPLEJO':'#F85149'}
+    for lv, cnt in level_counts.items():
+        if cnt:
+            c = lc_colors.get(lv,'#4B5568')
+            level_pills += (
+                f'<span style="font-family:DM Mono,monospace;font-size:0.6rem;'                f'color:{c};background:{c}18;border:1px solid {c}40;'                f'border-radius:4px;padding:2px 8px;">{cnt} {lv}</span> '
+            )
+
+    return f'''
+<div style="background:linear-gradient(135deg,#0B0D14 0%,#0E1118 100%);
+     border:1px solid #1C2030;border-radius:12px;padding:1.5rem;
+     margin-bottom:1.5rem;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:0;right:0;width:200px;height:100%;
+       background:linear-gradient(90deg,transparent,#00D4AA08);
+       pointer-events:none;"></div>
+
+  <div style="font-family:DM Mono,monospace;font-size:0.6rem;
+       color:#4B5568;letter-spacing:0.1em;margin-bottom:0.75rem;">
+    PORTFOLIO MIGRATION SUMMARY · {len(ok)} FLOWS ANALYZED
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;
+       margin-bottom:1rem;">
+    <div>
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;
+           color:#4B5568;margin-bottom:2px;">TOTAL EFFORT</div>
+      <div style="font-family:Syne,sans-serif;font-weight:800;
+           font-size:2rem;color:#00D4AA;line-height:1;">{round(total_h,0):.0f}h</div>
+      <div style="font-family:DM Mono,monospace;font-size:0.6rem;
+           color:#4B5568;">~{total_days} working days</div>
+    </div>
+    <div>
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;
+           color:#4B5568;margin-bottom:2px;">AVG QUALITY SCORE</div>
+      <div style="font-family:Syne,sans-serif;font-weight:800;
+           font-size:2rem;color:{sc};line-height:1;">{avg_score}</div>
+      <div style="font-family:DM Mono,monospace;font-size:0.6rem;
+           color:#4B5568;">out of 100</div>
+    </div>
+    <div>
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;
+           color:#4B5568;margin-bottom:2px;">FLOWS ANALYZED</div>
+      <div style="font-family:Syne,sans-serif;font-weight:800;
+           font-size:2rem;color:#E8EDF5;line-height:1;">{len(ok)}</div>
+      <div style="font-family:DM Mono,monospace;font-size:0.6rem;
+           color:#4B5568;">ready for export</div>
+    </div>
+    <div>
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;
+           color:#4B5568;margin-bottom:2px;">AVG PER FLOW</div>
+      <div style="font-family:Syne,sans-serif;font-weight:800;
+           font-size:2rem;color:#00A8FF;line-height:1;">{round(total_h/len(ok),0):.0f}h</div>
+      <div style="font-family:DM Mono,monospace;font-size:0.6rem;
+           color:#4B5568;">per flow average</div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:6px;">
+    {level_pills}
+  </div>
+</div>
+'''
 
 
 # ── HEADER ─────────────────────────────────────────────────────────────────────
@@ -1000,24 +1577,55 @@ else:
         flows_map = st.session_state.batch_flows
         ok = sorted([r for r in results if 'error' not in r],
                     key=lambda x: x.get('score',0), reverse=True)
+
+        # ── PORTFOLIO SUMMARY CARD ──────────────────────────────
+        st.markdown(portfolio_summary_card(results), unsafe_allow_html=True)
+
         st.markdown(
             f'<div style="margin:1.75rem 0 1rem;" class="lbl">'
             f'Portfolio · {len(ok)} flows · ranked by quality score</div>',
             unsafe_allow_html=True)
-        # Botón descarga Excel
+        # ── BOTONES DE EXPORTACIÓN ────────────────────────────────────────────
         excel_key = 'excel_bytes_batch'
+        pdf_key   = 'pdf_bytes_batch'
         if excel_key not in st.session_state: st.session_state[excel_key] = None
-        col_xl1, col_xl2 = st.columns([2,1])
-        with col_xl2:
+        if pdf_key   not in st.session_state: st.session_state[pdf_key]   = None
+
+        exp_col1, exp_col2 = st.columns(2)
+
+        with exp_col1:
+            st.markdown(
+                '<div style="font-family:DM Mono,monospace;font-size:0.6rem;'
+                'color:#4B5568;margin-bottom:4px;letter-spacing:0.06em;">'
+                'TECHNICAL EXPORT</div>',
+                unsafe_allow_html=True)
             if st.button('Export Portfolio Excel', key='btn_excel', use_container_width=True):
                 with st.spinner('Generating Excel...'):
-                    try: st.session_state[excel_key] = generar_portfolio_excel_v2(results, st.session_state.get("batch_raw_yamls",{}))
+                    try: st.session_state[excel_key] = generar_portfolio_excel_v2(
+                            results, st.session_state.get("batch_raw_yamls",{}))
                     except Exception as e: st.error(str(e))
             if st.session_state.get(excel_key):
                 st.download_button('↓ Download Excel', data=st.session_state[excel_key],
                     file_name='orchestria_portfolio.xlsx',
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                     key='dl_excel', use_container_width=True)
+
+        with exp_col2:
+            st.markdown(
+                '<div style="font-family:DM Mono,monospace;font-size:0.6rem;'
+                'color:#4B5568;margin-bottom:4px;letter-spacing:0.06em;">'
+                'EXECUTIVE REPORT</div>',
+                unsafe_allow_html=True)
+            if st.button('Generate PDF Report', key='btn_pdf', use_container_width=True):
+                with st.spinner('Generating PDF...'):
+                    try: st.session_state[pdf_key] = generar_portfolio_pdf(
+                            results, st.session_state.get("batch_flows",{}))
+                    except Exception as e: st.error(str(e))
+            if st.session_state.get(pdf_key):
+                st.download_button('↓ Download PDF', data=st.session_state[pdf_key],
+                    file_name='orchestria_portfolio_report.pdf',
+                    mime='application/pdf',
+                    key='dl_pdf', use_container_width=True)
 
         for idx, r in enumerate(ok):
             s  = r.get('score',0)
