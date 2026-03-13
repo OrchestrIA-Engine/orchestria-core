@@ -52,7 +52,7 @@ class IVRAnalyzer:
     def __init__(self):
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         self.llm = AnthropicAdapter(api_key=api_key)
-        self.config = LLMConfig(model="claude-sonnet-4-6", max_tokens=2000)
+        self.config = LLMConfig(model="claude-sonnet-4-6", max_tokens=2000, temperature=0.0)
 
     def analyze(self, flow: IVRFlow) -> dict:
         flow_description = self._describe_flow(flow)
@@ -117,28 +117,7 @@ El JSON debe tener exactamente esta estructura:
             "output": response.output_tokens
         }
         inv = FlowInventoryExtractor().extract(flow)
-        result["inventory"] = {
-            "total_nodes": inv.total_nodes,
-            "menu_nodes": inv.menu_nodes,
-            "transfer_nodes": inv.transfer_nodes,
-            "task_nodes": inv.task_nodes,
-            "exit_nodes": inv.exit_nodes,
-            "self_service_exits": inv.self_service_exits,
-            "agent_transfers": inv.agent_transfers,
-            "self_service_ratio": inv.self_service_ratio,
-            "unique_queues": inv.unique_queues,
-            "tts_messages": inv.tts_messages,
-            "voicemail_nodes": inv.voicemail_nodes,
-            "dtmf_input_nodes": inv.dtmf_input_nodes,
-            "data_services": inv.data_services,
-            "auth_services": inv.auth_services,
-            "api_calls": inv.api_calls,
-            "dynamic_variables": inv.dynamic_variables,
-            "total_external_deps": inv.total_external_deps,
-            "migration_complexity_score": inv.migration_complexity_score,
-            "migration_level": inv.migration_level,
-            "migration_risk_flags": inv.migration_risk_flags,
-        }
+        result["inventory"] = inv
         return result
 
     def _describe_flow(self, flow: IVRFlow) -> str:

@@ -31,6 +31,7 @@ class AnthropicAdapter(LLMAdapter):
         response = self.client.messages.create(
             model=config.model,
             max_tokens=config.max_tokens,
+            temperature=config.temperature,
             messages=[{"role": m.role, "content": m.content} for m in messages]
         )
 

@@ -10,6 +10,7 @@ class Message:
 class LLMConfig:
     model: str = "claude-sonnet-4-6"
     max_tokens: int = 1000
+    temperature: float = 0.0
 
 @dataclass
 class LLMResponse:
