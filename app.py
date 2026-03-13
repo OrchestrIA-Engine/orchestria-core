@@ -297,7 +297,7 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
         c1.metric('Nodes',    inv.get('total_nodes',0))
         c2.metric('Menus',    inv.get('menu_nodes',0))
         c3.metric('Transfers',inv.get('transfer_nodes',0))
-        c4.metric('Tasks',    inv.get('task_nodes',0))
+        c4.metric('Logic',    inv.get('task_nodes',0))
         c5.metric('Self-Svc',str(inv.get('self_service_ratio',0))+'%')
         c6.metric('Ext. Deps',inv.get('total_external_deps',0))
 
@@ -364,6 +364,390 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
                 st.warning(f_)
         else:
             st.success('No migration risks detected')
+
+
+
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+import io, re
+from datetime import date
+
+# ── PALETTE ───────────────────────────────────────────────────────────────────
+BG="07080B"; SURFACE="0E1118"; CARD="161B22"; BORDER="1C2030"
+TEXT="E8EDF5"; DIM="4B5568"; WHITE="FFFFFF"
+TEAL="00D4AA"; RED="F85149"; YELLOW="D29922"; ORANGE="F0883E"
+BLUE="00A8FF"; PURPLE="A78BFA"; GREEN="3FB950"
+
+def hf(c): return PatternFill("solid", fgColor=c)
+def bb(c=BORDER): return Border(bottom=Side(style="thin", color=c))
+def tb(c=BORDER): return Border(top=Side(style="thin", color=c))
+def full_border(c=BORDER):
+    s=Side(style="thin",color=c)
+    return Border(left=s,right=s,top=s,bottom=s)
+def score_color(s): return TEAL if s>=70 else YELLOW if s>=40 else RED
+def mig_color(l): return {"SIMPLE":TEAL,"MODERADO":YELLOW,"COMPLEJO":ORANGE,"MUY COMPLEJO":RED}.get(l,"4B5568")
+def safe_name(s): return re.sub(r'[\\/*?:\[\]]','_',s)[:31]
+
+def set_cols(ws, widths):
+    for i,w in enumerate(widths,1):
+        ws.column_dimensions[get_column_letter(i)].width=w
+
+def bg_all(ws, rows=400, cols=20):
+    for row in ws.iter_rows(min_row=1,max_row=rows,min_col=1,max_col=cols):
+        for c in row: c.fill=hf(BG)
+
+def section_header(ws, row, col_start, col_end, label, color=TEAL):
+    ws.merge_cells(f"{get_column_letter(col_start)}{row}:{get_column_letter(col_end)}{row}")
+    c = ws.cell(row=row, column=col_start, value=label)
+    c.font = Font(name="Arial", bold=True, size=8, color=color)
+    c.fill = hf(SURFACE)
+    c.alignment = Alignment(vertical="center")
+    c.border = bb()
+    ws.row_dimensions[row].height = 18
+    return row+1
+
+def table_header(ws, row, headers, col_start=2):
+    ws.row_dimensions[row].height = 18
+    for i, h in enumerate(headers):
+        c = ws.cell(row=row, column=col_start+i, value=h)
+        c.font = Font(name="Arial", bold=True, size=8, color=DIM)
+        c.fill = hf(SURFACE)
+        c.alignment = Alignment(horizontal="center" if i>0 else "left", vertical="center")
+        c.border = bb()
+    return row+1
+
+def data_row(ws, row, values, col_start=2, alt=False, colors=None):
+    ws.row_dimensions[row].height = 17
+    rbg = CARD if alt else SURFACE
+    for i, val in enumerate(values):
+        col = col_start+i
+        c = ws.cell(row=row, column=col, value=val)
+        c.fill = hf(rbg)
+        c.border = bb(BORDER)
+        txt_color = colors[i] if colors and i < len(colors) else TEXT
+        c.font = Font(name="Arial", size=9, color=txt_color)
+        c.alignment = Alignment(
+            horizontal="left" if i==0 else "center",
+            vertical="center", wrap_text=(i==0)
+        )
+    return row+1
+
+def spacer(ws, row, height=8):
+    ws.row_dimensions[row].height = height
+    return row+1
+
+
+# ── SHEET BUILDER: PORTFOLIO OVERVIEW ─────────────────────────────────────────
+def build_overview(wb, data, today):
+    ws = wb.active; ws.title="Portfolio Overview"
+    ws.sheet_view.showGridLines=False; ws.sheet_properties.tabColor=TEAL
+    ws.freeze_panes="A6"; bg_all(ws)
+    set_cols(ws,[3,30,8,12,8,8,10,12,10,14,12,12])
+    ws.row_dimensions[1].height=6; ws.row_dimensions[2].height=38
+    ws.row_dimensions[3].height=6; ws.row_dimensions[4].height=16; ws.row_dimensions[5].height=20
+
+    ws["B2"].value="OrchestrIA"
+    ws["B2"].font=Font(name="Arial",bold=True,size=18,color=WHITE)
+    ws["B2"].alignment=Alignment(vertical="center")
+    ws["D2"].value="IVR · IA"
+    ws["D2"].font=Font(name="Arial",size=11,color=TEAL)
+    ws["D2"].alignment=Alignment(vertical="center")
+    ws["H2"].value=f"Portfolio Analysis  ·  {len(data)} flows  ·  {today}"
+    ws["H2"].font=Font(name="Arial",size=8,color=DIM)
+    ws["H2"].alignment=Alignment(vertical="center",horizontal="right")
+
+    ws["B4"].value="Flows ranked by Quality Score. Click sheet tabs for individual flow detail."
+    ws["B4"].font=Font(name="Arial",size=8,color=DIM,italic=True)
+    ws["B4"].alignment=Alignment(vertical="center")
+
+    hdrs=["","Flow Name","Score","Quality","Nodes","Menus","Xfer","Self-Svc%","Ext Deps","Migration","Mig.Score","Dead Ends"]
+    for col,h in enumerate(hdrs,1):
+        c=ws.cell(row=5,column=col,value=h)
+        c.font=Font(name="Arial",bold=True,size=8,color=DIM)
+        c.fill=hf(SURFACE); c.border=bb()
+        c.alignment=Alignment(horizontal="left" if col<=2 else "center",vertical="center")
+
+    for idx,r in enumerate(data):
+        row=6+idx; ws.row_dimensions[row].height=19
+        inv=r.get("inventory",{}); score=r.get("score",0)
+        ml=inv.get("migration_level","—"); ms=inv.get("migration_complexity_score",0)
+        fname=r["filename"].replace(".yaml","").replace(".yml","")
+        rbg=CARD if idx%2==0 else SURFACE
+        if score>=70:   ql,qc="● GOOD",TEAL
+        elif score>=40: ql,qc="● FAIR",YELLOW
+        else:           ql,qc="● POOR",RED
+        vals=["",fname,score,ql,inv.get("total_nodes",0),inv.get("menu_nodes",0),
+              inv.get("transfer_nodes",0),inv.get("self_service_ratio",0),
+              inv.get("total_external_deps",0),ml,ms,len(inv.get("dead_ends",[]))]
+        for col,val in enumerate(vals,1):
+            c=ws.cell(row=row,column=col,value=val)
+            c.fill=hf(rbg); c.border=bb(BORDER)
+            c.alignment=Alignment(horizontal="left" if col<=2 else "center",vertical="center")
+            c.font=Font(name="Arial",size=9,color=TEXT)
+        ws.cell(row=row,column=3).font=Font(name="Arial",bold=True,size=11,color=score_color(score))
+        ws.cell(row=row,column=4).font=Font(name="Arial",size=8,bold=True,color=qc)
+        ws.cell(row=row,column=10).font=Font(name="Arial",size=8,bold=True,color=mig_color(ml))
+        ws.cell(row=row,column=8).number_format="0.0"
+
+    sum_row=6+len(data)+1; ws.row_dimensions[sum_row].height=24
+    ws.cell(row=sum_row,column=2,value="Portfolio Average")
+    ws.cell(row=sum_row,column=2).font=Font(name="Arial",bold=True,size=9,color=TEAL)
+    ws.cell(row=sum_row,column=2).fill=hf(SURFACE)
+    avg=ws.cell(row=sum_row,column=3)
+    avg.value=f"=AVERAGE(C6:C{5+len(data)})"
+    avg.font=Font(name="Arial",bold=True,size=12,color=TEAL)
+    avg.fill=hf(SURFACE); avg.number_format="0"
+    avg.alignment=Alignment(horizontal="center",vertical="center")
+    for col in [1]+list(range(4,13)): ws.cell(row=sum_row,column=col).fill=hf(SURFACE)
+
+
+# ── SHEET BUILDER: INDIVIDUAL FLOW ────────────────────────────────────────────
+def build_flow_sheet(wb, r, raw_yaml=None):
+    inv   = r.get("inventory", {})
+    score = r.get("score", 0)
+    fname = r["filename"].replace(".yaml","").replace(".yml","")
+    tab_name = safe_name(fname[:31])
+
+    ws = wb.create_sheet(tab_name)
+    ws.sheet_view.showGridLines = False
+    ws.sheet_properties.tabColor = score_color(score)
+    bg_all(ws)
+    set_cols(ws,[3,22,18,12,26,12,12,12,16])
+    ws.freeze_panes = "A7"
+
+    # ── HEADER ────────────────────────────────────────────────────────────────
+    ws.row_dimensions[1].height=6; ws.row_dimensions[2].height=36
+    ws.row_dimensions[3].height=20; ws.row_dimensions[4].height=6
+
+    ws["B2"].value=fname
+    ws["B2"].font=Font(name="Arial",bold=True,size=15,color=WHITE)
+    ws["B2"].alignment=Alignment(vertical="center")
+
+    ml=inv.get("migration_level","—"); ms=inv.get("migration_complexity_score",0)
+    ws["F2"].value=f"Score  {score}/100"
+    ws["F2"].font=Font(name="Arial",bold=True,size=13,color=score_color(score))
+    ws["F2"].alignment=Alignment(vertical="center")
+
+    ws["H2"].value=f"Migration: {ml}  ({ms}/100)"
+    ws["H2"].font=Font(name="Arial",size=10,bold=True,color=mig_color(ml))
+    ws["H2"].alignment=Alignment(vertical="center",horizontal="right")
+
+    # Summary
+    summary = r.get("summary","") or r.get("executive_summary","")
+    if summary:
+        ws["B3"].value=summary[:200]
+        ws["B3"].font=Font(name="Arial",size=8,color=DIM,italic=True)
+        ws["B3"].alignment=Alignment(vertical="center",wrap_text=True)
+        ws.merge_cells("B3:I3")
+    ws.row_dimensions[3].height=32
+
+    # ── S1: NODE INVENTORY ────────────────────────────────────────────────────
+    row=5
+    row=section_header(ws,row,2,9,"§1 · NODE INVENTORY",TEAL)
+    row=table_header(ws,row,["Node ID","Name","Type","Next Nodes","TTS Prompt","Timeout","MaxRetries","Dead End?"])
+    nodes = inv.get("nodes_detail") or []
+    if not nodes and raw_yaml:
+        # Extraer nodos directamente del YAML raw
+        SECTION_TYPE = {
+            "menus":"MENU","tasks":"TASK","transfers":"TRANSFER",
+            "prompts":"PROMPT","tasks_voicemail":"VOICEMAIL","exits":"EXIT"
+        }
+        dead_ends = set(inv.get("dead_ends",[]))
+        for section, ntype in SECTION_TYPE.items():
+            for nid, ndata in (raw_yaml.get(section) or {}).items():
+                if not isinstance(ndata,dict): continue
+                # next nodes
+                nexts=[]
+                for ch in (ndata.get("choices") or []):
+                    if isinstance(ch,dict) and ch.get("next"):
+                        nexts.append(ch["next"].split("/")[-1])
+                for k in ("next","onSuccess","onFailure","onTimeout","onMaxRetries","fallback"):
+                    v=ndata.get(k)
+                    if isinstance(v,dict) and v.get("next"): nexts.append(v["next"].split("/")[-1])
+                    elif isinstance(v,str) and v.startswith("./"): nexts.append(v.split("/")[-1])
+                # TTS
+                tts = ndata.get("tts","") or ndata.get("initialGreeting",{}).get("tts","") if isinstance(ndata.get("initialGreeting"),dict) else ""
+                if isinstance(tts,str): tts=tts[:60]+"…" if len(tts)>60 else tts
+                timeout = ndata.get("timeout","")
+                maxret  = ndata.get("maxRetries","")
+                is_dead = "⚠ YES" if nid in dead_ends else ""
+                nodes.append({
+                    "id":nid,"name":ndata.get("name",nid),"type":ntype,
+                    "next":", ".join(nexts[:4]) or "—","tts":tts or "—",
+                    "timeout":timeout or "—","maxRetries":maxret or "—",
+                    "dead_end":is_dead
+                })
+
+    if nodes:
+        for idx,n in enumerate(nodes):
+            if isinstance(n,dict):
+                vals=[n.get("id",n.get("node_id","?")),n.get("name",""),n.get("type",""),
+                      n.get("next","—"),n.get("tts","—"),n.get("timeout","—"),
+                      n.get("maxRetries","—"),n.get("dead_end","")]
+            else:
+                vals=[str(n),"","","","","","",""]
+            colors=[TEXT,TEXT,BLUE,DIM,DIM,
+                    RED if vals[5]=="—" else TEXT,
+                    TEXT,
+                    RED if vals[7] else TEXT]
+            row=data_row(ws,row,vals,col_start=2,alt=idx%2==0,colors=colors)
+    else:
+        c=ws.cell(row=row,column=2,value="Node detail not available — run analysis to populate")
+        c.font=Font(name="Arial",size=8,color=DIM,italic=True)
+        c.fill=hf(SURFACE); row+=1
+
+    # ── S2: EXTERNAL DEPENDENCIES ─────────────────────────────────────────────
+    row=spacer(ws,row)
+    row=section_header(ws,row,2,9,"§2 · EXTERNAL DEPENDENCIES",BLUE)
+    row=table_header(ws,row,["Type","Service / Name","Count","Notes"])
+
+    deps=[
+        ("Data APIs",   ", ".join(inv.get("data_services",[])) or "None",  len(inv.get("data_services",[])), "Requires data reconect in Cloud"),
+        ("Auth Services",", ".join(inv.get("auth_services",[])) or "None", len(inv.get("auth_services",[])), "Validate Genesys Cloud Auth compatibility"),
+        ("Agent Queues", ", ".join(inv.get("unique_queues",[])) or "None",  len(inv.get("unique_queues",[])), "Queue routing config must be recreated"),
+        ("TTS Variables",", ".join(f"{{{v}}}" for v in inv.get("dynamic_variables",[])) or "None", len(inv.get("dynamic_variables",[])), "Verify TTS runtime availability in Cloud"),
+    ]
+    for idx,(dtype,name,count,note) in enumerate(deps):
+        vals=[dtype,name,count,note]
+        colors=[TEAL,TEXT,YELLOW if count>0 else TEXT,DIM]
+        row=data_row(ws,row,vals,col_start=2,alt=idx%2==0,colors=colors)
+
+    # ── S3: RISK ANALYSIS ─────────────────────────────────────────────────────
+    row=spacer(ws,row)
+    row=section_header(ws,row,2,9,"§3 · RISK ANALYSIS",ORANGE)
+    row=table_header(ws,row,["Risk Item","Value","Severity","Description"])
+
+    dead_ends=inv.get("dead_ends",[]) or []
+    fallbacks=inv.get("missing_fallbacks",[]) or []
+    loops=inv.get("loop_nodes",[]) or []
+    dtmf=inv.get("dtmf_input_nodes",[]) or []
+    voice=inv.get("speech_nodes",[]) or []
+    dual_input = bool(dtmf and voice)
+
+    risks=[
+        ("Dead End Nodes",   len(dead_ends),   "HIGH"   if dead_ends else "NONE",  ", ".join(dead_ends[:5]) or "None detected"),
+        ("Missing Fallbacks",len(fallbacks),   "CRITICAL" if fallbacks else "NONE",", ".join(fallbacks[:5]) or "All nodes have fallbacks"),
+        ("Loop Nodes",       len(loops),       "MEDIUM" if loops else "NONE",      ", ".join(loops[:5]) or "No loops detected"),
+        ("Dual-Input (DTMF+Speech)",1 if dual_input else 0,"MEDIUM" if dual_input else "NONE","Requires dual recognition engine in Cloud"),
+        ("Flow Depth (hops)",inv.get("flow_depth",0),"HIGH" if inv.get("flow_depth",0)>8 else "LOW","Max hops from entry to exit"),
+        ("Entry Node Defined",1 if inv.get("entry_node_id") else 0,"CRITICAL" if not inv.get("entry_node_id") else "NONE","Required for Genesys Cloud migration"),
+    ]
+    sev_color={"CRITICAL":RED,"HIGH":ORANGE,"MEDIUM":YELLOW,"LOW":GREEN,"NONE":DIM}
+    for idx,(item,val,sev,desc) in enumerate(risks):
+        colors=[TEXT,YELLOW if val>0 else TEXT,sev_color.get(sev,TEXT),DIM]
+        row=data_row(ws,row,[item,val,sev,desc],col_start=2,alt=idx%2==0,colors=colors)
+
+    # ── S4: MIGRATION BREAKDOWN ───────────────────────────────────────────────
+    row=spacer(ws,row)
+    row=section_header(ws,row,2,9,"§4 · MIGRATION COMPLEXITY BREAKDOWN",PURPLE)
+    row=table_header(ws,row,["Dimension","Score","Max","Pct","Key Drivers"])
+    bd=inv.get("migration_score_breakdown",{})
+    dim_info=[
+        ("D1 · Graph Complexity","D1_grafo",25,BLUE),
+        ("D2 · External Dependencies","D2_dependencias",25,TEAL),
+        ("D3 · Business Risk","D3_riesgo",20,RED),
+        ("D4 · Volume & Scale","D4_escala",15,YELLOW),
+        ("D5 · Testing Effort","D5_testing",15,PURPLE),
+    ]
+    for idx,(label,key,max_v,color) in enumerate(dim_info):
+        d=bd.get(key,{})
+        sc=d.get("score",0); pct=f"{round(sc/max_v*100)}%" if max_v else "—"
+        drivers=d.get("drivers","") or ""
+        row=data_row(ws,row,[label,sc,max_v,pct,drivers],col_start=2,alt=idx%2==0,
+                     colors=[color,color,DIM,YELLOW if sc>max_v*0.6 else TEXT,DIM])
+
+    # Total
+    total_ms=inv.get("migration_complexity_score",0)
+    ws.row_dimensions[row].height=22
+    ws.cell(row=row,column=2,value="TOTAL MIGRATION SCORE").font=Font(name="Arial",bold=True,size=9,color=WHITE)
+    ws.cell(row=row,column=2).fill=hf(SURFACE)
+    ws.cell(row=row,column=3,value=total_ms).font=Font(name="Arial",bold=True,size=12,color=mig_color(ml))
+    ws.cell(row=row,column=3).fill=hf(SURFACE)
+    ws.cell(row=row,column=3).alignment=Alignment(horizontal="center",vertical="center")
+    ws.cell(row=row,column=4,value=100).font=Font(name="Arial",size=9,color=DIM)
+    ws.cell(row=row,column=4).fill=hf(SURFACE)
+    ws.cell(row=row,column=4).alignment=Alignment(horizontal="center",vertical="center")
+    ws.cell(row=row,column=5,value=f"→ {ml}").font=Font(name="Arial",bold=True,size=10,color=mig_color(ml))
+    ws.cell(row=row,column=5).fill=hf(SURFACE)
+    row+=1
+
+    # ── S5: FINDINGS & ACTION PLAN ────────────────────────────────────────────
+    findings=r.get("critical_issues",[]) or []
+    recommendations=r.get("recommendations",[]) or []
+    if findings or recommendations:
+        row=spacer(ws,row)
+        row=section_header(ws,row,2,9,"§5 · FINDINGS & ACTION PLAN",RED)
+        if findings:
+            row=table_header(ws,row,["#","Finding","Severity"])
+            for idx,f in enumerate(findings,1):
+                row=data_row(ws,row,[idx,f,"CRITICAL"],col_start=2,alt=idx%2==0,
+                             colors=[DIM,TEXT,RED])
+        if recommendations:
+            row=spacer(ws,row,6)
+            row=table_header(ws,row,["#","Recommendation","Priority"])
+            for idx,rec in enumerate(recommendations,1):
+                row=data_row(ws,row,[idx,rec,"HIGH"],col_start=2,alt=idx%2==0,
+                             colors=[DIM,TEXT,YELLOW])
+
+
+# ── SHEET BUILDER: MIGRATION BREAKDOWN ────────────────────────────────────────
+def build_migration_sheet(wb, data):
+    ws=wb.create_sheet("Migration Breakdown")
+    ws.sheet_view.showGridLines=False; ws.sheet_properties.tabColor=RED
+    ws.freeze_panes="A5"; bg_all(ws)
+    set_cols(ws,[3,28,10,14,18,20,16,14,14])
+    ws.row_dimensions[2].height=34; ws.row_dimensions[4].height=20
+    ws["B2"].value="Migration Complexity — 5 Dimensions"
+    ws["B2"].font=Font(name="Arial",bold=True,size=13,color=WHITE)
+    ws["B2"].alignment=Alignment(vertical="center")
+    dim_keys=["D1_grafo","D2_dependencias","D3_riesgo","D4_escala","D5_testing"]
+    dim_lbl=["Graph (25)","Ext.Deps (25)","Biz Risk (20)","Scale (15)","Testing (15)"]
+    dim_clr=[BLUE,TEAL,RED,YELLOW,PURPLE]
+    h3=["","Flow","TOTAL","Level"]+dim_lbl
+    for col,h in enumerate(h3,1):
+        c=ws.cell(row=4,column=col,value=h)
+        c.font=Font(name="Arial",bold=True,size=8,color=dim_clr[col-5] if col>=5 else DIM)
+        c.fill=hf(SURFACE); c.border=bb()
+        c.alignment=Alignment(horizontal="left" if col<=2 else "center",vertical="center")
+    for idx,r in enumerate(data):
+        row=5+idx; ws.row_dimensions[row].height=20
+        inv=r.get("inventory",{}); bd=inv.get("migration_score_breakdown",{})
+        fname=r["filename"].replace(".yaml","").replace(".yml","")
+        ml=inv.get("migration_level","—"); ms=inv.get("migration_complexity_score",0)
+        rbg=CARD if idx%2==0 else SURFACE
+        rv=["",fname,ms,ml]+[bd.get(k,{}).get("score",0) for k in dim_keys]
+        for col,val in enumerate(rv,1):
+            c=ws.cell(row=row,column=col,value=val)
+            c.fill=hf(rbg); c.border=bb(BORDER)
+            c.alignment=Alignment(horizontal="left" if col<=2 else "center",vertical="center")
+            c.font=Font(name="Arial",size=9,color=TEXT if col<=4 else dim_clr[col-5])
+        ws.cell(row=row,column=3).font=Font(name="Arial",bold=True,size=11,color=mig_color(ml))
+        ws.cell(row=row,column=4).font=Font(name="Arial",size=8,bold=True,color=mig_color(ml))
+
+
+# ── MAIN FUNCTION ─────────────────────────────────────────────────────────────
+def generar_portfolio_excel_v2(results, raw_yamls=None):
+    """
+    results: lista de dicts con score, inventory, filename, summary, critical_issues, recommendations
+    raw_yamls: dict {filename: yaml_dict} opcional para desglose de nodos
+    """
+    data = sorted([r for r in results if "error" not in r],
+                  key=lambda x: x.get("score",0), reverse=True)
+    today = date.today().strftime("%d/%m/%Y")
+    raw_yamls = raw_yamls or {}
+    wb = Workbook()
+
+    build_overview(wb, data, today)
+    build_migration_sheet(wb, data)
+    for r in data:
+        raw = raw_yamls.get(r["filename"])
+        build_flow_sheet(wb, r, raw_yaml=raw)
+
+    buf = io.BytesIO()
+    wb.save(buf); buf.seek(0)
+    return buf.getvalue()
+
 
 # ── HEADER ─────────────────────────────────────────────────────────────────────
 st.markdown(
@@ -453,56 +837,90 @@ if modo == 'Individual Flow':
         mostrar_resultado(st.session_state.analysis,
                           flow=st.session_state.flow, key_prefix='main')
 
-# ── BATCH ───────────────────────────────────────────────────────────────────────
+# ── BATCH ────────────────────────────────────────────────────────────────────────────────
 else:
+    if 'queued_files' not in st.session_state:
+        st.session_state.queued_files = {}
+
     col_l, col_r = st.columns([1, 1], gap='large')
 
     with col_l:
         st.markdown('<span class="lbl">Upload Portfolio · up to 50 flows</span>',
                     unsafe_allow_html=True)
-        uploaded_files = st.file_uploader('', type=['yaml','yml','json','xml'],
-                                          accept_multiple_files=True,
-                                          label_visibility='collapsed')
-        if uploaded_files:
+        new_uploads = st.file_uploader('', type=['yaml','yml','json','xml'],
+                                       accept_multiple_files=True,
+                                       label_visibility='collapsed',
+                                       key='batch_uploader')
+        if new_uploads:
+            for f in new_uploads:
+                if f.name not in st.session_state.queued_files:
+                    st.session_state.queued_files[f.name] = f.read()
+        queued = st.session_state.queued_files
+        total_q = len(queued)
+        if total_q > 0:
             st.markdown(
-                f'<div style="font-family:\'DM Mono\',monospace;font-size:0.7rem;'
-                f'color:#3D4D66;margin-top:0.5rem;">{len(uploaded_files)} file(s) ready</div>',
+                f'<div style="font-family:DM Mono,monospace;font-size:0.7rem;'
+                f'color:#00D4AA;margin-top:0.5rem;">'
+                f'{total_q} file(s) queued · {min(total_q,50)} will be analyzed</div>',
                 unsafe_allow_html=True)
+            for fname in list(queued.keys()):
+                c1, c2 = st.columns([6,1])
+                with c1:
+                    st.markdown(
+                        f'<div style="font-family:DM Mono,monospace;font-size:0.7rem;'
+                        f'color:#4B5568;padding:2px 0;">{fname}</div>',
+                        unsafe_allow_html=True)
+                with c2:
+                    if st.button('✕', key=f'del_{fname}', help=f'Remove {fname}'):
+                        del st.session_state.queued_files[fname]
+                        st.rerun()
+            if st.button('Clear all', key='clear_queue'):
+                st.session_state.queued_files = {}
+                st.rerun()
         st.markdown(
             '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:0.75rem;">'
             '<span class="compat-chip">✓ Up to 50 flows</span>'
+            '<span class="compat-chip">✓ Add files one by one</span>'
             '<span class="compat-chip">✓ Auto-ranked by score</span>'
-            '<span class="compat-chip">✓ PDF per flow</span>'
             '</div>', unsafe_allow_html=True)
 
     with col_r:
         run_batch = st.button('Analyze Portfolio →', type='primary',
-                               disabled=not uploaded_files)
+                               disabled=not st.session_state.queued_files)
         if not st.session_state.batch_results:
             st.markdown(empty_state_panel(), unsafe_allow_html=True)
 
+    uploaded_files = st.session_state.queued_files
+
     if run_batch and uploaded_files:
-        resultados, flows_map = [], {}
+        resultados, flows_map, raw_yamls_map = [], {}, {}
+        resultados, flows_map, raw_yamls_map = [], {}, {}
         prog = st.progress(0)
         slot = st.empty()
         analyzer = IVRAnalyzer()
-        for i, f in enumerate(uploaded_files[:50]):
+        for i, (fname_k, fbytes_k) in enumerate(list(uploaded_files.items())[:50]):
             slot.markdown(
-                f'<div style="font-family:\'DM Mono\',monospace;font-size:0.7rem;'
-                f'color:#3D4D66;">Analyzing {i+1}/{len(uploaded_files)} · {f.name}</div>',
+                f'<div style="font-family:DM Mono,monospace;font-size:0.7rem;'
+                f'color:#3D4D66;">Analyzing {i+1}/{len(uploaded_files)} · {fname_k}</div>',
                 unsafe_allow_html=True)
-            flow, err = parse_content(f.read().decode('utf-8'), f.name)
+            raw_content = fbytes_k.decode('utf-8') if isinstance(fbytes_k, bytes) else fbytes_k
+            flow, err = parse_content(raw_content, fname_k)
             if err:
-                resultados.append({'filename':f.name,'score':0,'error':err})
+                resultados.append({'filename':fname_k,'score':0,'error':err})
             else:
                 r = analyzer.analyze(flow)
-                r['filename'] = f.name
+                r['filename'] = fname_k
                 resultados.append(r)
-                flows_map[f.name] = flow
+                flows_map[fname_k] = flow
+                try:
+                    import yaml as _yaml
+                    raw_yamls_map[fname_k] = _yaml.safe_load(raw_content)
+                except: pass
             prog.progress((i+1)/len(uploaded_files))
         slot.empty(); prog.empty()
         st.session_state.batch_results = resultados
-        st.session_state.batch_flows   = flows_map
+        st.session_state.batch_flows       = flows_map
+        st.session_state.batch_raw_yamls   = raw_yamls_map
         st.rerun()
 
     if st.session_state.batch_results:
@@ -514,6 +932,21 @@ else:
             f'<div style="margin:1.75rem 0 1rem;" class="lbl">'
             f'Portfolio · {len(ok)} flows · ranked by quality score</div>',
             unsafe_allow_html=True)
+        # Botón descarga Excel
+        excel_key = 'excel_bytes_batch'
+        if excel_key not in st.session_state: st.session_state[excel_key] = None
+        col_xl1, col_xl2 = st.columns([2,1])
+        with col_xl2:
+            if st.button('Export Portfolio Excel', key='btn_excel', use_container_width=True):
+                with st.spinner('Generating Excel...'):
+                    try: st.session_state[excel_key] = generar_portfolio_excel_v2(results, st.session_state.get("batch_raw_yamls",{}))
+                    except Exception as e: st.error(str(e))
+            if st.session_state.get(excel_key):
+                st.download_button('↓ Download Excel', data=st.session_state[excel_key],
+                    file_name='orchestria_portfolio.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    key='dl_excel', use_container_width=True)
+
         for idx, r in enumerate(ok):
             s  = r.get('score',0)
             ml = r.get('inventory',{}).get('migration_level','—')
