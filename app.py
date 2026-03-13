@@ -270,17 +270,7 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
     col_s, col_r = st.columns([1, 2])
     with col_s:
         st.markdown(score_ring(score), unsafe_allow_html=True)
-        if flow:
-            pk = 'pdf_bytes_' + key_prefix
-            if pk not in st.session_state: st.session_state[pk] = None
-            if st.button('Generate Report PDF', key='btn_'+key_prefix, use_container_width=True):
-                with st.spinner('Building executive report...'):
-                    try: st.session_state[pk] = generar_pdf_bytes(flow, analysis)
-                    except Exception as e: st.error(str(e))
-            if st.session_state.get(pk):
-                st.download_button('↓ Download PDF', data=st.session_state[pk],
-                    file_name=flow.flow_name+'_orchestria.pdf', mime='application/pdf',
-                    key='dl_'+key_prefix, use_container_width=True)
+        # Export buttons rendered by render_export_buttons() above
 
     with col_r:
         st.markdown(
@@ -320,13 +310,11 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
         breakdown = inv.get('migration_score_breakdown', {})
         flags = inv.get('migration_risk_flags', [])
 
-        # Header del card
+        # Header del card — benchmark fijo banca
         st.markdown(
-            f'<div style="display:flex;align-items:center;gap:0.9rem;margin-bottom:1.25rem;">'
-            f'<span class="lbl" style="margin:0;">Migration to Cloud</span>'
-            f'{migration_badge(ml)}'
-            f'<span style="font-family:\'DM Mono\',monospace;font-size:0.7rem;color:#3D4D66;">{ms}/100</span>'
-            f'</div>', unsafe_allow_html=True)
+            f'<div style="display:flex;align-items:center;gap:0.9rem;margin-bottom:0.5rem;">'            f'<span class="lbl" style="margin:0;">Migration to Cloud</span>'            f'{migration_badge(ml)}'            f'<span style="font-family:\'DM Mono\',monospace;font-size:0.7rem;color:#3D4D66;">{ms}/100</span>'            f'</div>', unsafe_allow_html=True)
+        st.markdown(benchmark_card(inv, 'banking'), unsafe_allow_html=True)
+
 
         # Breakdown de 5 dimensiones si existe
         if breakdown:
@@ -357,6 +345,11 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
                 )
             bars_html += '</div>'
             st.markdown(bars_html, unsafe_allow_html=True)
+
+        # Score & Migration explanation — determinista, sin LLM
+        explanation = score_explanation(analysis)
+        if explanation:
+            st.markdown(explanation, unsafe_allow_html=True)
 
         # Migration hours estimate — sección destacada
         st.markdown(migration_hours_card(inv), unsafe_allow_html=True)
@@ -811,92 +804,118 @@ def generar_portfolio_excel_v2(results, raw_yamls=None):
 
 
 
-def ivr_loading_panel(current: int, total: int, current_name: str = "") -> str:
-    """
-    Panel de loading con grafo IVR animado.
-    Nodos más grandes, tipos coloreados, pulse en nodo activo.
-    """
-    pct = int((current / max(total, 1)) * 100)
 
-    # Arquitectura del grafo — posiciones en % del viewport SVG
+def ivr_loading_panel(current: int, total: int, current_name: str = "", phases: list = None) -> str:
+    """
+    Loading panel nivel Apple — grafo IVR con nodos tipados que se iluminan
+    y conectan mientras avanza el análisis. Diseño oscuro, tipografía Syne.
+    phases: lista de strings para los pasos (solo para modo individual)
+    """
+    pct = int((current / max(total, 1)) * 100) if total > 1 else min(current * 25, 95)
+
+    # Grafo IVR — arquitectura realista de un flujo bancario tipo
     nodes = [
-        {"id":"entry",  "x":50,  "y":12,  "type":"ENTRY",    "label":"ENTRY",    "r":7},
-        {"id":"menu1",  "x":25,  "y":32,  "type":"MENU",     "label":"MENU",     "r":6},
-        {"id":"menu2",  "x":75,  "y":32,  "type":"MENU",     "label":"MENU",     "r":6},
-        {"id":"task1",  "x":12,  "y":55,  "type":"TASK",     "label":"TASK",     "r":5},
-        {"id":"api1",   "x":38,  "y":55,  "type":"API",      "label":"API",      "r":5},
-        {"id":"auth1",  "x":62,  "y":55,  "type":"AUTH",     "label":"AUTH",     "r":5},
-        {"id":"xfer1",  "x":85,  "y":55,  "type":"TRANSFER", "label":"XFER",     "r":5},
-        {"id":"exit1",  "x":25,  "y":78,  "type":"EXIT",     "label":"EXIT",     "r":4},
-        {"id":"exit2",  "x":60,  "y":78,  "type":"EXIT",     "label":"EXIT",     "r":4},
-        {"id":"tts1",   "x":42,  "y":90,  "type":"TTS",      "label":"TTS",      "r":4},
+        # id, x%, y%, tipo, label, radio
+        ("start",  50, 8,  "ENTRY",    "ENTRY",  8),
+        ("auth",   28, 25, "AUTH",     "AUTH",   6),
+        ("menu1",  72, 25, "MENU",     "MENU",   6),
+        ("api1",   14, 45, "API",      "API",    5),
+        ("task1",  38, 45, "TASK",     "TASK",   5),
+        ("cond1",  62, 45, "COND",     "COND",   5),
+        ("xfer1",  86, 45, "XFER",     "XFER",   5),
+        ("vm1",    20, 65, "VOICE",    "TTS",    4),
+        ("exit1",  44, 65, "EXIT",     "EXIT",   4),
+        ("exit2",  68, 65, "EXIT",     "EXIT",   4),
+        ("exit3",  88, 65, "EXIT",     "EXIT",   4),
     ]
     edges = [
-        ("entry","menu1"),("entry","menu2"),
-        ("menu1","task1"),("menu1","api1"),
-        ("menu2","auth1"),("menu2","xfer1"),
-        ("task1","exit1"),("api1","tts1"),
-        ("auth1","exit2"),("xfer1","exit2"),
+        ("start","auth"), ("start","menu1"),
+        ("auth","api1"), ("auth","task1"),
+        ("menu1","cond1"), ("menu1","xfer1"),
+        ("api1","vm1"), ("task1","exit1"),
+        ("cond1","exit2"), ("xfer1","exit3"),
+        ("vm1","exit1"),
     ]
-    colors = {
-        "ENTRY":    "#00D4AA",
-        "MENU":     "#00A8FF",
-        "TASK":     "#A78BFA",
-        "API":      "#F0883E",
-        "AUTH":     "#F85149",
-        "TRANSFER": "#00D4AA",
-        "EXIT":     "#3FB950",
-        "TTS":      "#D29922",
+    TYPE_COLOR = {
+        "ENTRY": "#00D4AA", "AUTH": "#F85149", "MENU": "#00A8FF",
+        "API":   "#F0883E", "TASK": "#A78BFA", "COND": "#D29922",
+        "XFER":  "#00D4AA", "VOICE":"#3FB950", "EXIT": "#4B5568",
     }
 
-    W, H = 340, 110
+    W, H = 360, 80
     lit = max(1, int(len(nodes) * pct / 100))
 
-    svg_edges = ""
+    # Edges SVG
+    svg_e = ""
     for (a, b) in edges:
-        n1 = next(n for n in nodes if n["id"] == a)
-        n2 = next(n for n in nodes if n["id"] == b)
-        x1, y1 = int(n1["x"] * W / 100), int(n1["y"] * H / 100)
-        x2, y2 = int(n2["x"] * W / 100), int(n2["y"] * H / 100)
-        # Edge iluminado si ambos nodos están lit
-        i1 = next(i for i,n in enumerate(nodes) if n["id"]==a)
-        i2 = next(i for i,n in enumerate(nodes) if n["id"]==b)
-        edge_lit = (i1 < lit and i2 < lit)
-        c = colors.get(n2["type"], "#4B5568")
-        stroke = c if edge_lit else "#1C2030"
-        opacity = "0.7" if edge_lit else "1"
-        svg_edges += (
-            '<line x1="%d" y1="%d" x2="%d" y2="%d" '            'stroke="%s" stroke-width="1.2" opacity="%s"/>'        ) % (x1, y1, x2, y2, stroke, opacity)
+        n1 = next(n for n in nodes if n[0]==a)
+        n2 = next(n for n in nodes if n[0]==b)
+        x1,y1 = int(n1[1]*W/100), int(n1[2]*H/100)
+        x2,y2 = int(n2[1]*W/100), int(n2[2]*H/100)
+        i1 = next(i for i,n in enumerate(nodes) if n[0]==a)
+        i2 = next(i for i,n in enumerate(nodes) if n[0]==b)
+        lit_edge = i1 < lit and i2 < lit
+        c = TYPE_COLOR.get(n2[3], "#4B5568")
+        svg_e += '<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-width="%.1f" opacity="%.1f"/>' % (
+            x1, y1, x2, y2, c if lit_edge else "#1C2030", 1.2 if lit_edge else 0.8, 0.8 if lit_edge else 1.0)
 
-    svg_nodes = ""
-    for i, n in enumerate(nodes):
-        cx  = int(n["x"] * W / 100)
-        cy  = int(n["y"] * H / 100)
-        r   = n["r"]
-        col = colors.get(n["type"], "#4B5568")
-        is_lit     = i < lit
-        is_current = i == lit - 1
-        opacity    = "1" if is_lit else "0.15"
-
-        if is_current:
-            # Ring exterior + pulse
-            svg_nodes += (
-                '<circle cx="%d" cy="%d" r="%d" fill="none" stroke="%s" '                'stroke-width="1.5" opacity="0.4">'                '<animate attributeName="r" values="%d;%d;%d" dur="0.9s" '                'repeatCount="indefinite"/>'                '<animate attributeName="opacity" values="0.4;0;0.4" dur="0.9s" '                'repeatCount="indefinite"/>'                '</circle>'            ) % (cx, cy, r+4, col, r+4, r+8, r+4)
-            svg_nodes += (
-                '<circle cx="%d" cy="%d" r="%d" fill="%s" opacity="1" '                'filter="drop-shadow(0 0 5px %s)"/>'            ) % (cx, cy, r, col, col)
+    # Nodes SVG
+    svg_n = ""
+    for i, (nid, nx, ny, ntype, nlabel, nr) in enumerate(nodes):
+        cx, cy = int(nx*W/100), int(ny*H/100)
+        c = TYPE_COLOR.get(ntype, "#4B5568")
+        is_lit = i < lit
+        is_cur = i == lit - 1
+        op = "1" if is_lit else "0.12"
+        if is_cur:
+            # Outer pulse ring
+            svg_n += '<circle cx="%d" cy="%d" r="%d" fill="none" stroke="%s" stroke-width="1.5" opacity="0.3"><animate attributeName="r" values="%d;%d;%d" dur="1s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.3;0;0.3" dur="1s" repeatCount="indefinite"/></circle>' % (
+                cx, cy, nr+5, c, nr+5, nr+10, nr+5)
+            svg_n += '<circle cx="%d" cy="%d" r="%d" fill="%s" filter="drop-shadow(0 0 4px %s)"/>' % (cx, cy, nr, c, c)
         else:
-            svg_nodes += '<circle cx="%d" cy="%d" r="%d" fill="%s" opacity="%s"/>'                          % (cx, cy, r, col, opacity)
+            svg_n += '<circle cx="%d" cy="%d" r="%d" fill="%s" opacity="%s"/>' % (cx, cy, nr, c, op)
+        svg_n += '<text x="%d" y="%d" text-anchor="middle" fill="%s" opacity="%s" font-family="DM Mono,monospace" font-size="5.5" font-weight="600">%s</text>' % (
+            cx, cy+nr+8, c, op, nlabel)
 
-        # Label
-        label_y = cy + r + 9
-        svg_nodes += (
-            '<text x="%d" y="%d" text-anchor="middle" fill="%s" opacity="%s" '            'font-family="DM Mono,monospace" font-size="6" font-weight="600">%s</text>'        ) % (cx, label_y, col, opacity, n["label"])
+    # Nombre del archivo actual (recortado)
+    fname_short = current_name.replace(".yaml","").replace(".yml","")[:34]
 
-    fname_short = current_name.replace(".yaml","").replace(".yml","")[:32]
+    # Render de fases si es modo individual
+    phases_html = ""
+    if phases:
+        for idx2, ph in enumerate(phases):
+            if idx2 < current:
+                style = "color:#00D4AA;font-size:0.68rem;"
+                icon = "✓"
+            elif idx2 == current:
+                style = "color:#00A8FF;font-size:0.68rem;"
+                icon = "▶"
+            else:
+                style = "color:#252D3D;font-size:0.68rem;"
+                icon = "○"
+            phases_html += '<div style="font-family:DM Mono,monospace;%s padding:3px 0;border-bottom:1px solid #0D1017;">%s %s</div>' % (style, icon, ph)
+
+    counter_html = '<span style="font-family:Syne,sans-serif;font-size:1.1rem;font-weight:800;color:#00D4AA;">%d/%d</span>' % (current, total) if total > 1 else '<span style="font-family:DM Mono,monospace;font-size:0.65rem;color:#4B5568;">ANALYZING...</span>'
 
     return (
-        '<div style="background:#0B0D14;border:1px solid #1C2030;border-radius:10px;'        'padding:1rem 1.25rem;margin-top:0.6rem;">'        '<div style="display:flex;justify-content:space-between;'        'align-items:center;margin-bottom:0.5rem;">'        '<span style="font-family:DM Mono,monospace;font-size:0.6rem;'        'color:#4B5568;letter-spacing:0.1em;">ANALYZING PORTFOLIO</span>'        '<span style="font-family:Syne,sans-serif;font-size:1.1rem;'        'font-weight:800;color:#00D4AA;">%d/%d</span>'        '</div>'        '<svg viewBox="0 0 340 130" xmlns="http://www.w3.org/2000/svg" '        'style="width:100%%;height:95px;display:block;">%s%s</svg>'        '<div style="margin-top:0.5rem;">'        '<div style="display:flex;justify-content:space-between;'        'font-family:DM Mono,monospace;font-size:0.6rem;'        'color:#4B5568;margin-bottom:3px;">'        '<span style="color:#E8EDF5;overflow:hidden;text-overflow:ellipsis;'        'white-space:nowrap;max-width:75%%;">%s</span>'        '<span style="color:#00D4AA;">%d%%</span>'        '</div>'        '<div style="background:#0E1118;border-radius:2px;height:3px;">'        '<div style="background:linear-gradient(90deg,#00D4AA,#00A8FF);'        'height:100%%;width:%d%%;border-radius:2px;"></div>'        '</div></div></div>'
-    ) % (current, total, svg_edges, svg_nodes, fname_short, pct, pct)
+        '<div style="background:#0B0D14;border:1px solid #1C2030;border-radius:12px;padding:1rem 1.25rem;">'
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">'
+        '<span style="font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;letter-spacing:0.1em;">PROCESSING FLOW</span>'
+        + counter_html +
+        '</div>'
+        '<svg viewBox="0 0 360 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:80px;display:block;">'
+        + svg_e + svg_n +
+        '</svg>'
+        + (phases_html if phases_html else "")  +
+        '<div style="margin-top:0.6rem;">'
+        '<div style="display:flex;justify-content:space-between;font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;margin-bottom:3px;">'
+        '<span style="color:#E8EDF5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:78%%;">%s</span>'
+        '<span style="color:#00D4AA;">%d%%</span>'
+        '</div>'
+        '<div style="background:#0E1118;border-radius:2px;height:3px;">'
+        '<div style="background:linear-gradient(90deg,#00D4AA,#00A8FF);height:100%%;width:%d%%;border-radius:2px;transition:width 0.3s ease;"></div>'
+        '</div></div></div>'
+    ) % (fname_short, pct, pct)
 
 
 def generar_portfolio_pdf(results, flows_map) -> bytes:
@@ -1398,6 +1417,343 @@ def portfolio_summary_card(results: list) -> str:
 '''
 
 
+
+# ── BENCHMARKS SECTORIALES ────────────────────────────────────────────────────
+# Basado en Contact Babel Industry Reports 2023-2024 + Genesys State of CX 2024
+# y experiencia de campo de integradores certificados
+SECTOR_BENCHMARKS = {
+    "banking": {
+        "label": "Banca",
+        "self_service_avg": 45,
+        "self_service_top": 65,
+        "quality_avg": 62,
+        "quality_top": 78,
+        "migration_avg": 38,
+        "note": "Alta regulación (PCI-DSS, GDPR). Auth obligatoria en operaciones.",
+    },
+    "insurance": {
+        "label": "Seguros",
+        "self_service_avg": 38,
+        "self_service_top": 58,
+        "quality_avg": 58,
+        "quality_top": 74,
+        "migration_avg": 32,
+        "note": "Flujos de siniestros complejos. Grabación obligatoria.",
+    },
+    "telco": {
+        "label": "Telecomunicaciones",
+        "self_service_avg": 55,
+        "self_service_top": 72,
+        "quality_avg": 64,
+        "quality_top": 80,
+        "migration_avg": 28,
+        "note": "Mayor madurez en autoservicio. Pocas integraciones críticas.",
+    },
+    "public": {
+        "label": "Administración Pública",
+        "self_service_avg": 28,
+        "self_service_top": 45,
+        "quality_avg": 52,
+        "quality_top": 68,
+        "migration_avg": 22,
+        "note": "Flujos simples pero volúmenes altos y horarios restrictivos.",
+    },
+    "ecommerce": {
+        "label": "eCommerce / Retail",
+        "self_service_avg": 48,
+        "self_service_top": 68,
+        "quality_avg": 60,
+        "quality_top": 76,
+        "migration_avg": 25,
+        "note": "Alta estacionalidad. APIs de estado de pedido frecuentes.",
+    },
+    "healthcare": {
+        "label": "Sanidad",
+        "self_service_avg": 32,
+        "self_service_top": 50,
+        "quality_avg": 55,
+        "quality_top": 70,
+        "migration_avg": 35,
+        "note": "HIPAA/LOPD. Grabación regulada. Transfers críticos.",
+    },
+}
+
+
+def score_explanation(analysis: dict) -> str:
+    """
+    Genera explicación textual determinista del score y la complejidad
+    de migración. Sin LLM — puramente desde el inventory.
+    """
+    inv   = analysis.get("inventory", {})
+    score = analysis.get("score", 0)
+    bd    = inv.get("migration_score_breakdown", {})
+    ml    = inv.get("migration_level", "SIMPLE")
+    ms    = inv.get("migration_complexity_score", 0)
+
+    # ── Drivers del Quality Score ─────────────────────────────────────────────
+    score_drivers = []
+    menus     = inv.get("menu_nodes", 0)
+    menus_bad = inv.get("menus_without_handlers", [])
+    fallbacks = inv.get("missing_fallbacks", [])
+    dead      = inv.get("dead_ends", [])
+    self_svc  = inv.get("self_service_ratio", 0)
+    apis      = inv.get("data_services", [])
+    auth      = inv.get("auth_services", [])
+    dvars     = inv.get("dynamic_variables", [])
+
+    if isinstance(menus_bad, list) and len(menus_bad) > 0:
+        score_drivers.append(
+            f"{len(menus_bad)}/{menus} menús sin timeout ni handler de no-input"
+        )
+    if isinstance(fallbacks, list) and len(fallbacks) > 0:
+        score_drivers.append(
+            f"{len(fallbacks)} transfer(s) sin fallback — desconexión silenciosa posible"
+        )
+    if isinstance(dead, list) and len(dead) > 0:
+        score_drivers.append(
+            f"{len(dead)} dead end(s) — nodos sin salida definida"
+        )
+    if self_svc < 30:
+        score_drivers.append(
+            f"Autoservicio {self_svc}% — muy por debajo del benchmark sectorial (40-55%)"
+        )
+    if not inv.get("entry_node_id"):
+        score_drivers.append("Entry node no definido — punto de entrada ambiguo")
+
+    # ── Drivers del Migration Score ───────────────────────────────────────────
+    mig_drivers = []
+    d1 = bd.get("D1_grafo",        {}).get("score", 0)
+    d2 = bd.get("D2_dependencias", {}).get("score", 0)
+    d3 = bd.get("D3_riesgo",       {}).get("score", 0)
+    d4 = bd.get("D4_escala",       {}).get("score", 0)
+    d5 = bd.get("D5_testing",      {}).get("score", 0)
+
+    # Identificar las dimensiones más pesadas
+    dims = [
+        (d1, "complejidad de grafo",     25),
+        (d2, "dependencias externas",    25),
+        (d3, "riesgo de negocio",        20),
+        (d4, "volumen y escala",         15),
+        (d5, "esfuerzo de testing",      15),
+    ]
+    # Dimensiones que superan el 60% de su máximo
+    high_dims = [(score, label) for score, label, max_v in dims
+                 if max_v > 0 and score / max_v >= 0.6]
+
+    if apis:
+        mig_drivers.append(
+            f"{len(apis)} integración(es) de datos ({', '.join(apis[:2])})"
+        )
+    if auth:
+        mig_drivers.append(
+            f"{len(auth)} auth service(s) — requieren validación OAuth/SAML Cloud"
+        )
+    if dvars:
+        mig_drivers.append(
+            f"{len(dvars)} variable(s) TTS dinámica(s) — verificar runtime Cloud"
+        )
+    if isinstance(dead, list) and dead:
+        mig_drivers.append(f"{len(dead)} dead end(s) — rediseño previo a migración")
+    if not inv.get("entry_node_id"):
+        mig_drivers.append("Entry node no definido — prerequisito arquitectónico")
+
+    # ── Render HTML ───────────────────────────────────────────────────────────
+    score_color_map = {
+        True:  "#F85149",   # score < 40
+        False: "#D29922",   # score < 70
+    }
+    sc = "#F85149" if score < 40 else ("#D29922" if score < 70 else "#00D4AA")
+    mc = {"SIMPLE":"#00D4AA","MODERADO":"#D29922",
+          "COMPLEJO":"#F0883E","MUY COMPLEJO":"#F85149"}.get(ml,"#4B5568")
+
+    def driver_pill(text, color="#4B5568"):
+        return (
+            f'<div style="display:flex;align-items:flex-start;gap:8px;'            f'padding:5px 0;border-bottom:1px solid #0E1118;">'            f'<span style="color:{color};font-size:0.7rem;margin-top:1px;">▸</span>'            f'<span style="font-family:Plus Jakarta Sans,sans-serif;'            f'font-size:0.75rem;color:#7A8BA5;line-height:1.4;">{text}</span>'            f'</div>'
+        )
+
+    score_section = ""
+    if score_drivers:
+        pills = "".join(driver_pill(d, sc) for d in score_drivers)
+        score_section = (
+            f'<div style="margin-bottom:0.75rem;">'            f'<div style="font-family:DM Mono,monospace;font-size:0.6rem;'            f'color:#4B5568;letter-spacing:0.08em;margin-bottom:6px;">'            f'QUALITY SCORE — FACTORES PRINCIPALES</div>'            f'{pills}</div>'
+        )
+
+    mig_section = ""
+    if mig_drivers:
+        pills = "".join(driver_pill(d, mc) for d in mig_drivers)
+        mig_section = (
+            f'<div>'            f'<div style="font-family:DM Mono,monospace;font-size:0.6rem;'            f'color:#4B5568;letter-spacing:0.08em;margin-bottom:6px;">'            f'MIGRACIÓN {ml} — DRIVERS</div>'            f'{pills}</div>'
+        )
+
+    if not score_section and not mig_section:
+        return ""
+
+    return (
+        f'<div style="background:#0B0D14;border:1px solid #1C2030;'        f'border-radius:10px;padding:1rem 1.25rem;margin-top:0.5rem;">'        f'{score_section}{mig_section}'        f'</div>'
+    )
+
+
+def benchmark_card(inv: dict, sector: str = "banking") -> str:
+    """
+    Card de comparación contra benchmark sectorial.
+    sector: banking | insurance | telco | public | ecommerce | healthcare
+    """
+    b = SECTOR_BENCHMARKS.get(sector, SECTOR_BENCHMARKS["banking"])
+    self_svc = inv.get("self_service_ratio", 0)
+    ms       = inv.get("migration_complexity_score", 0)
+
+    def gap_color(val, avg, top):
+        if val >= top:   return "#00D4AA"
+        if val >= avg:   return "#D29922"
+        return "#F85149"
+
+    def pct_bar(val, max_val=100, color="#00D4AA"):
+        w = min(int(val / max_val * 100), 100)
+        return (
+            f'<div style="flex:1;background:#0E1118;border-radius:2px;height:4px;">'            f'<div style="width:{w}%;background:{color};height:100%;border-radius:2px;"></div>'            f'</div>'
+        )
+
+    ss_color  = gap_color(self_svc, b["self_service_avg"], b["self_service_top"])
+    mig_color_b = "#00D4AA" if ms <= b["migration_avg"] else (
+                  "#D29922" if ms <= b["migration_avg"]*1.5 else "#F85149")
+
+    return f'''
+<div style="background:#0B0D14;border:1px solid #1C2030;border-radius:10px;
+     padding:1rem 1.25rem;margin-top:0.5rem;">
+  <div style="display:flex;justify-content:space-between;align-items:center;
+       margin-bottom:0.75rem;">
+    <div style="font-family:DM Mono,monospace;font-size:0.6rem;
+         color:#4B5568;letter-spacing:0.08em;">
+      BENCHMARK SECTORIAL · {b["label"].upper()}
+    </div>
+    <div style="font-family:DM Mono,monospace;font-size:0.6rem;color:#3D4D66;">
+      Fuente: Contact Babel 2024 · Genesys State of CX 2024
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+    <div style="background:#0E1118;border-radius:8px;padding:0.6rem 0.8rem;">
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;color:#4B5568;margin-bottom:4px;">
+        SELF-SERVICE RATIO
+      </div>
+      <div style="display:flex;align-items:baseline;gap:0.4rem;margin-bottom:6px;">
+        <span style="font-family:Syne,sans-serif;font-weight:800;
+              font-size:1.4rem;color:{ss_color};">{self_svc}%</span>
+        <span style="font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;">
+          vs avg {b["self_service_avg"]}% · top {b["self_service_top"]}%
+        </span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        {pct_bar(self_svc, 100, ss_color)}
+        <div style="width:1px;height:8px;background:#3D4D66;position:relative;
+             margin-left:{b["self_service_avg"]}%;"></div>
+      </div>
+    </div>
+
+    <div style="background:#0E1118;border-radius:8px;padding:0.6rem 0.8rem;">
+      <div style="font-family:DM Mono,monospace;font-size:0.55rem;color:#4B5568;margin-bottom:4px;">
+        MIGRATION COMPLEXITY
+      </div>
+      <div style="display:flex;align-items:baseline;gap:0.4rem;margin-bottom:6px;">
+        <span style="font-family:Syne,sans-serif;font-weight:800;
+              font-size:1.4rem;color:{mig_color_b};">{ms}/100</span>
+        <span style="font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;">
+          vs avg {b["migration_avg"]}/100
+        </span>
+      </div>
+      {pct_bar(ms, 100, mig_color_b)}
+    </div>
+  </div>
+
+  <div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.72rem;
+       color:#3D4D66;line-height:1.5;border-top:1px solid #0E1118;padding-top:0.5rem;">
+    {b["note"]}
+  </div>
+</div>
+'''
+
+
+
+def render_export_buttons(analysis, flow, results=None, flows_map=None, raw_yamls=None, mode='individual'):
+    """
+    Botones de exportación homologados: PDF individual + Excel individual + 
+    PDF portfolio + Excel portfolio. Misma UI en ambos modos.
+    """
+    if mode == 'individual':
+        excel_key = 'excel_bytes_main'
+        pdf_key   = 'pdf_bytes_main'
+        if excel_key not in st.session_state: st.session_state[excel_key] = None
+        if pdf_key   not in st.session_state: st.session_state[pdf_key]   = None
+
+        st.markdown(
+            '<div style="font-family:DM Mono,monospace;font-size:0.6rem;'
+            'color:#3D4D66;letter-spacing:0.1em;margin-bottom:0.5rem;">EXPORT</div>',
+            unsafe_allow_html=True)
+        ecol, pcol = st.columns(2)
+        with ecol:
+            if st.button('Export Excel', key='btn_excel_main', use_container_width=True):
+                with st.spinner('Generating Excel...'):
+                    try:
+                        fname = (flow.flow_name if flow else 'flow') + '.yaml'
+                        single_result = dict(analysis)
+                        single_result['filename'] = fname
+                        raw_yaml_map = {}
+                        st.session_state[excel_key] = generar_portfolio_excel_v2(
+                            [single_result], raw_yaml_map)
+                    except Exception as e: st.error(str(e))
+            if st.session_state.get(excel_key):
+                st.download_button('↓ Download Excel', data=st.session_state[excel_key],
+                    file_name='orchestria_flow.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    key='dl_excel_main', use_container_width=True)
+        with pcol:
+            if st.button('Generate PDF', key='btn_pdf_main', use_container_width=True):
+                with st.spinner('Building report...'):
+                    try: st.session_state[pdf_key] = generar_pdf_bytes(flow, analysis)
+                    except Exception as e: st.error(str(e))
+            if st.session_state.get(pdf_key):
+                fname_dl = (flow.flow_name if flow else 'flow') + '_orchestria.pdf'
+                st.download_button('↓ Download PDF', data=st.session_state[pdf_key],
+                    file_name=fname_dl, mime='application/pdf',
+                    key='dl_pdf_main', use_container_width=True)
+
+    else:  # portfolio
+        excel_key = 'excel_bytes_batch'
+        pdf_key   = 'pdf_bytes_batch'
+        if excel_key not in st.session_state: st.session_state[excel_key] = None
+        if pdf_key   not in st.session_state: st.session_state[pdf_key]   = None
+
+        st.markdown(
+            '<div style="font-family:DM Mono,monospace;font-size:0.6rem;'
+            'color:#3D4D66;letter-spacing:0.1em;margin-bottom:0.5rem;">EXPORT PORTFOLIO</div>',
+            unsafe_allow_html=True)
+        ecol, pcol = st.columns(2)
+        with ecol:
+            st.markdown('<div style="font-family:DM Mono,monospace;font-size:0.55rem;color:#4B5568;margin-bottom:3px;">TECHNICAL</div>', unsafe_allow_html=True)
+            if st.button('Export Excel', key='btn_excel_batch', use_container_width=True):
+                with st.spinner('Generating Excel...'):
+                    try: st.session_state[excel_key] = generar_portfolio_excel_v2(
+                            results, raw_yamls or {})
+                    except Exception as e: st.error(str(e))
+            if st.session_state.get(excel_key):
+                st.download_button('↓ Download Excel', data=st.session_state[excel_key],
+                    file_name='orchestria_portfolio.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    key='dl_excel_batch', use_container_width=True)
+        with pcol:
+            st.markdown('<div style="font-family:DM Mono,monospace;font-size:0.55rem;color:#4B5568;margin-bottom:3px;">EXECUTIVE</div>', unsafe_allow_html=True)
+            if st.button('Generate PDF', key='btn_pdf_batch', use_container_width=True):
+                with st.spinner('Generating PDF...'):
+                    try: st.session_state[pdf_key] = generar_portfolio_pdf(
+                            results, flows_map or {})
+                    except Exception as e: st.error(str(e))
+            if st.session_state.get(pdf_key):
+                st.download_button('↓ Download PDF', data=st.session_state[pdf_key],
+                    file_name='orchestria_portfolio_report.pdf',
+                    mime='application/pdf',
+                    key='dl_pdf_batch', use_container_width=True)
+
+
 # ── HEADER ─────────────────────────────────────────────────────────────────────
 st.markdown(
     '<div class="orch-header">'
@@ -1422,7 +1778,7 @@ YAML_EXAMPLE = '''inboundCall:
     es-ES:
       textToSpeech: Genesys TTS'''
 
-# ── INDIVIDUAL ──────────────────────────────────────────────────────────────────
+# ── INDIVIDUAL ───────────────────────────────────────────────────────────────
 if modo == 'Individual Flow':
     col_l, col_r = st.columns([1, 1], gap='large')
 
@@ -1431,11 +1787,12 @@ if modo == 'Individual Flow':
         uploaded = st.file_uploader('', type=['yaml','yml','json','xml'],
                                     label_visibility='collapsed')
         st.markdown(
-            '<div style="margin:0.6rem 0;text-align:center;font-family:\'DM Mono\','
-            'monospace;font-size:0.6rem;color:#1E2535;letter-spacing:0.12em;">— OR PASTE YAML DIRECTLY —</div>',
+            '<div style="margin:0.6rem 0;text-align:center;font-family:DM Mono,'
+            'monospace;font-size:0.6rem;color:#1E2535;letter-spacing:0.12em;">'
+            '— OR PASTE YAML DIRECTLY —</div>',
             unsafe_allow_html=True)
-        yaml_input = st.text_area('', height=240, placeholder=YAML_EXAMPLE,
-                                   label_visibility='collapsed')
+        yaml_input = st.text_area('', height=220, placeholder=YAML_EXAMPLE,
+                                  label_visibility='collapsed')
         st.markdown(
             '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:0.6rem;">'
             '<span class="compat-chip">✓ inboundCall</span>'
@@ -1447,9 +1804,10 @@ if modo == 'Individual Flow':
 
     with col_r:
         analizar_clicked = st.button('Analyze Flow →', type='primary', use_container_width=True)
+        loading_slot = st.empty()
 
-        # Empty state — siempre visible hasta que haya análisis
-        if not st.session_state.analysis:
+        # Empty state solo cuando no hay análisis ni input
+        if not st.session_state.analysis and not uploaded and not yaml_input.strip():
             st.markdown(empty_state_panel(), unsafe_allow_html=True)
 
         if analizar_clicked:
@@ -1462,31 +1820,53 @@ if modo == 'Individual Flow':
                 st.error('Upload a file or paste YAML content.')
                 st.stop()
 
-            loading_slot = st.empty()
-            render = mostrar_loading(loading_slot)
+            PHASES = [
+                "Parsing YAML structure",
+                "Extracting node inventory",
+                "Running migration model",
+                "Generating AI analysis",
+                "Building report",
+            ]
 
-            render(0,0); time.sleep(0.3)
+            loading_slot.markdown(
+                ivr_loading_panel(0, 1, filename, phases=PHASES),
+                unsafe_allow_html=True)
+            time.sleep(0.3)
+
             flow, err = parse_content(content, filename)
             if err:
                 loading_slot.empty(); st.error(err); st.stop()
-            render(1,1); time.sleep(0.2)
-            render(2,2); time.sleep(0.2)
-            render(3,3)
+
+            loading_slot.markdown(ivr_loading_panel(1, 1, filename, phases=PHASES), unsafe_allow_html=True)
+            time.sleep(0.2)
+            loading_slot.markdown(ivr_loading_panel(2, 1, filename, phases=PHASES), unsafe_allow_html=True)
+            time.sleep(0.2)
+            loading_slot.markdown(ivr_loading_panel(3, 1, filename, phases=PHASES), unsafe_allow_html=True)
+
             analysis = IVRAnalyzer().analyze(flow)
-            render(4,4); time.sleep(0.3)
+
+            loading_slot.markdown(ivr_loading_panel(4, 1, filename, phases=PHASES), unsafe_allow_html=True)
+            time.sleep(0.3)
             loading_slot.empty()
 
             st.session_state.analysis = analysis
             st.session_state.flow = flow
             st.session_state['pdf_bytes_main'] = None
+            st.session_state['excel_bytes_main'] = None
             st.rerun()
 
     if st.session_state.analysis and modo == 'Individual Flow':
         st.divider()
+        # Export buttons — homologados con batch
+        render_export_buttons(
+            st.session_state.analysis,
+            st.session_state.flow,
+            mode='individual')
+        st.divider()
         mostrar_resultado(st.session_state.analysis,
                           flow=st.session_state.flow, key_prefix='main')
 
-# ── BATCH ────────────────────────────────────────────────────────────────────────────────────────
+# ── BATCH ─────────────────────────────────────────────────────────────────────
 else:
     if 'queued_files' not in st.session_state:
         st.session_state.queued_files = {}
@@ -1504,7 +1884,7 @@ else:
             for f in new_uploads:
                 if f.name not in st.session_state.queued_files:
                     st.session_state.queued_files[f.name] = f.read()
-        queued = st.session_state.queued_files
+        queued  = st.session_state.queued_files
         total_q = len(queued)
         if total_q > 0:
             st.markdown(
@@ -1534,7 +1914,7 @@ else:
         if not st.session_state.batch_results and not st.session_state.queued_files:
             st.markdown(empty_state_panel(), unsafe_allow_html=True)
 
-    # ── FEATURE CHIPS ─────────────────────────────────────────
+    # Feature chips — fuera de columnas, mismos en ambos modos
     st.markdown(
         '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:1rem;">'
         '<span class="compat-chip">✓ Up to 50 flows</span>'
@@ -1567,9 +1947,9 @@ else:
                     raw_yamls_map[fname_k] = _yaml.safe_load(raw_content)
                 except: pass
         loading_slot.empty()
-        st.session_state.batch_results   = resultados
-        st.session_state.batch_flows      = flows_map
-        st.session_state.batch_raw_yamls  = raw_yamls_map
+        st.session_state.batch_results  = resultados
+        st.session_state.batch_flows    = flows_map
+        st.session_state.batch_raw_yamls = raw_yamls_map
         st.rerun()
 
     if st.session_state.batch_results:
@@ -1578,54 +1958,21 @@ else:
         ok = sorted([r for r in results if 'error' not in r],
                     key=lambda x: x.get('score',0), reverse=True)
 
-        # ── PORTFOLIO SUMMARY CARD ──────────────────────────────
+        # Portfolio summary card
         st.markdown(portfolio_summary_card(results), unsafe_allow_html=True)
 
+        # Export buttons — homologados con individual
+        render_export_buttons(
+            None, None,
+            results=results,
+            flows_map=flows_map,
+            raw_yamls=st.session_state.get('batch_raw_yamls',{}),
+            mode='portfolio')
+
         st.markdown(
-            f'<div style="margin:1.75rem 0 1rem;" class="lbl">'
+            f'<div style="margin:1.5rem 0 1rem;" class="lbl">'
             f'Portfolio · {len(ok)} flows · ranked by quality score</div>',
             unsafe_allow_html=True)
-        # ── BOTONES DE EXPORTACIÓN ────────────────────────────────────────────
-        excel_key = 'excel_bytes_batch'
-        pdf_key   = 'pdf_bytes_batch'
-        if excel_key not in st.session_state: st.session_state[excel_key] = None
-        if pdf_key   not in st.session_state: st.session_state[pdf_key]   = None
-
-        exp_col1, exp_col2 = st.columns(2)
-
-        with exp_col1:
-            st.markdown(
-                '<div style="font-family:DM Mono,monospace;font-size:0.6rem;'
-                'color:#4B5568;margin-bottom:4px;letter-spacing:0.06em;">'
-                'TECHNICAL EXPORT</div>',
-                unsafe_allow_html=True)
-            if st.button('Export Portfolio Excel', key='btn_excel', use_container_width=True):
-                with st.spinner('Generating Excel...'):
-                    try: st.session_state[excel_key] = generar_portfolio_excel_v2(
-                            results, st.session_state.get("batch_raw_yamls",{}))
-                    except Exception as e: st.error(str(e))
-            if st.session_state.get(excel_key):
-                st.download_button('↓ Download Excel', data=st.session_state[excel_key],
-                    file_name='orchestria_portfolio.xlsx',
-                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    key='dl_excel', use_container_width=True)
-
-        with exp_col2:
-            st.markdown(
-                '<div style="font-family:DM Mono,monospace;font-size:0.6rem;'
-                'color:#4B5568;margin-bottom:4px;letter-spacing:0.06em;">'
-                'EXECUTIVE REPORT</div>',
-                unsafe_allow_html=True)
-            if st.button('Generate PDF Report', key='btn_pdf', use_container_width=True):
-                with st.spinner('Generating PDF...'):
-                    try: st.session_state[pdf_key] = generar_portfolio_pdf(
-                            results, st.session_state.get("batch_flows",{}))
-                    except Exception as e: st.error(str(e))
-            if st.session_state.get(pdf_key):
-                st.download_button('↓ Download PDF', data=st.session_state[pdf_key],
-                    file_name='orchestria_portfolio_report.pdf',
-                    mime='application/pdf',
-                    key='dl_pdf', use_container_width=True)
 
         for idx, r in enumerate(ok):
             s  = r.get('score',0)
