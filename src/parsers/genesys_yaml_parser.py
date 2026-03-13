@@ -66,6 +66,9 @@ class GenesysYAMLParser:
         for v in data.get("onInput", {}).values():
             r = self._ref(v)
             if r: refs.append(r)
+        for action in data.get("actions", []):
+            if isinstance(action, dict):
+                refs.extend(self._extract_refs(action))
         return list(set(refs))
 
     def _parse_node(self, data):
