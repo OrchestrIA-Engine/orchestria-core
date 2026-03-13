@@ -749,6 +749,78 @@ def generar_portfolio_excel_v2(results, raw_yamls=None):
     return buf.getvalue()
 
 
+
+def ivr_loading_panel(current: int, total: int, current_name: str = "") -> str:
+    pct = int((current / max(total, 1)) * 100)
+    nodes = [
+        {"id":"entry","x":50,"y":20,"type":"entry","label":"Entry"},
+        {"id":"menu1","x":25,"y":42,"type":"menu","label":"Menu"},
+        {"id":"menu2","x":75,"y":42,"type":"menu","label":"Menu"},
+        {"id":"task1","x":12,"y":65,"type":"task","label":"Task"},
+        {"id":"api1", "x":40,"y":65,"type":"api", "label":"API"},
+        {"id":"xfer1","x":72,"y":65,"type":"xfer","label":"Xfer"},
+        {"id":"exit1","x":28,"y":87,"type":"exit","label":"Exit"},
+        {"id":"exit2","x":60,"y":87,"type":"exit","label":"Exit"},
+    ]
+    edges = [
+        ("entry","menu1"),("entry","menu2"),
+        ("menu1","task1"),("menu1","api1"),
+        ("menu2","api1"),("menu2","xfer1"),
+        ("task1","exit1"),("api1","exit1"),("xfer1","exit2"),
+    ]
+    lit = max(1, int(len(nodes) * pct / 100))
+    node_colors = {
+        "entry":"#00D4AA","menu":"#00A8FF","task":"#A78BFA",
+        "api":"#F0883E","xfer":"#00D4AA","exit":"#4B5568"
+    }
+    W, H = 300, 130
+    svg_edges = ""
+    for (a, b) in edges:
+        n1 = next(n for n in nodes if n["id"] == a)
+        n2 = next(n for n in nodes if n["id"] == b)
+        x1 = int(n1["x"] * W / 100)
+        y1 = int(n1["y"] * H / 100)
+        x2 = int(n2["x"] * W / 100)
+        y2 = int(n2["y"] * H / 100)
+        svg_edges += ('<line x1="%d" y1="%d" x2="%d" y2="%d" '
+                      'stroke="#1C2030" stroke-width="1.5"/>' % (x1, y1, x2, y2))
+    svg_nodes = ""
+    for i, n in enumerate(nodes):
+        cx = int(n["x"] * W / 100)
+        cy = int(n["y"] * H / 100)
+        color = node_colors.get(n["type"], "#4B5568")
+        is_lit = i < lit
+        is_current = i == lit - 1
+        opacity = "1" if is_lit else "0.2"
+        glow = ('filter:drop-shadow(0 0 6px %s);' % color) if is_current else ""
+        pulse = ('<animate attributeName="r" values="6;9;6" dur="0.7s" repeatCount="indefinite"/>') if is_current else ""
+        svg_nodes += (
+            '<circle cx="%d" cy="%d" r="6" fill="%s" opacity="%s" style="%s">%s</circle>'
+            '<text x="%d" y="%d" text-anchor="middle" fill="%s" opacity="%s" '
+            'font-family="DM Mono,monospace" font-size="7">%s</text>'
+        ) % (cx, cy, color, opacity, glow, pulse,
+             cx, cy + 17, color, opacity, n["label"])
+    fname_short = current_name.replace(".yaml", "").replace(".yml", "")[:30]
+    bar_w = pct
+    html = (
+        '''<div style="background:#0B0D14;border:1px solid #1C2030;border-radius:10px;padding:1.1rem 1.4rem;margin-top:0.6rem;">'''
+        '''<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">'''
+        '''<span style="font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;letter-spacing:0.08em;">ANALYZING PORTFOLIO</span>'''
+        '''<span style="font-family:Syne,sans-serif;font-size:1rem;font-weight:800;color:#00D4AA;">%d/%d</span>'''
+        '''</div>'''
+        '''<svg viewBox="0 0 300 130" xmlns="http://www.w3.org/2000/svg" style="width:100%%;height:90px;display:block;">%s%s</svg>'''
+        '''<div style="margin-top:0.6rem;">'''
+        '''<div style="display:flex;justify-content:space-between;font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;margin-bottom:4px;">'''
+        '''<span style="color:#E8EDF5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72%%;">%s</span>'''
+        '''<span style="color:#00D4AA;">%d%%</span>'''
+        '''</div>'''
+        '''<div style="background:#1C2030;border-radius:2px;height:3px;overflow:hidden;">'''
+        '''<div style="background:linear-gradient(90deg,#00D4AA,#00A8FF);height:100%%;width:%d%%;border-radius:2px;"></div>'''
+        '''</div></div></div>'''
+    ) % (current, total, svg_edges, svg_nodes, fname_short, pct, bar_w)
+    return html
+
+
 # ── HEADER ─────────────────────────────────────────────────────────────────────
 st.markdown(
     '<div class="orch-header">'
@@ -837,7 +909,7 @@ if modo == 'Individual Flow':
         mostrar_resultado(st.session_state.analysis,
                           flow=st.session_state.flow, key_prefix='main')
 
-# ── BATCH ────────────────────────────────────────────────────────────────────────────────
+# ── BATCH ────────────────────────────────────────────────────────────────────────────────────────
 else:
     if 'queued_files' not in st.session_state:
         st.session_state.queued_files = {}
@@ -877,31 +949,32 @@ else:
             if st.button('Clear all', key='clear_queue'):
                 st.session_state.queued_files = {}
                 st.rerun()
-        st.markdown(
-            '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:0.75rem;">'
-            '<span class="compat-chip">✓ Up to 50 flows</span>'
-            '<span class="compat-chip">✓ Add files one by one</span>'
-            '<span class="compat-chip">✓ Auto-ranked by score</span>'
-            '</div>', unsafe_allow_html=True)
 
     with col_r:
         run_batch = st.button('Analyze Portfolio →', type='primary',
                                disabled=not st.session_state.queued_files)
-        if not st.session_state.batch_results:
+        loading_slot = st.empty()
+        if not st.session_state.batch_results and not st.session_state.queued_files:
             st.markdown(empty_state_panel(), unsafe_allow_html=True)
+
+    # ── FEATURE CHIPS ─────────────────────────────────────────
+    st.markdown(
+        '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:1rem;">'
+        '<span class="compat-chip">✓ Up to 50 flows</span>'
+        '<span class="compat-chip">✓ Add files one by one</span>'
+        '<span class="compat-chip">✓ Auto-ranked by score</span>'
+        '<span class="compat-chip">✓ Excel + PDF export</span>'
+        '</div>', unsafe_allow_html=True)
 
     uploaded_files = st.session_state.queued_files
 
     if run_batch and uploaded_files:
         resultados, flows_map, raw_yamls_map = [], {}, {}
-        resultados, flows_map, raw_yamls_map = [], {}, {}
-        prog = st.progress(0)
-        slot = st.empty()
+        total_files = len(uploaded_files)
         analyzer = IVRAnalyzer()
         for i, (fname_k, fbytes_k) in enumerate(list(uploaded_files.items())[:50]):
-            slot.markdown(
-                f'<div style="font-family:DM Mono,monospace;font-size:0.7rem;'
-                f'color:#3D4D66;">Analyzing {i+1}/{len(uploaded_files)} · {fname_k}</div>',
+            loading_slot.markdown(
+                ivr_loading_panel(i + 1, total_files, fname_k),
                 unsafe_allow_html=True)
             raw_content = fbytes_k.decode('utf-8') if isinstance(fbytes_k, bytes) else fbytes_k
             flow, err = parse_content(raw_content, fname_k)
@@ -916,11 +989,10 @@ else:
                     import yaml as _yaml
                     raw_yamls_map[fname_k] = _yaml.safe_load(raw_content)
                 except: pass
-            prog.progress((i+1)/len(uploaded_files))
-        slot.empty(); prog.empty()
-        st.session_state.batch_results = resultados
-        st.session_state.batch_flows       = flows_map
-        st.session_state.batch_raw_yamls   = raw_yamls_map
+        loading_slot.empty()
+        st.session_state.batch_results   = resultados
+        st.session_state.batch_flows      = flows_map
+        st.session_state.batch_raw_yamls  = raw_yamls_map
         st.rerun()
 
     if st.session_state.batch_results:
