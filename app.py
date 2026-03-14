@@ -1,10 +1,9 @@
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-import sys, os
 import streamlit as st
 import sys, os, json, time, tempfile
+# Path fix para Streamlit Cloud
+import pathlib as _pathlib, sys as _sys
+_sys.path.insert(0, str(_pathlib.Path(__file__).parent.resolve()))
+
 from src.parsers.genesys_yaml_parser import GenesysYAMLParser
 from src.agents.analyzer import IVRAnalyzer
 from src.agents.documentor import IVRDocumentor
