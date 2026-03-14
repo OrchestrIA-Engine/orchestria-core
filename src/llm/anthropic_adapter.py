@@ -2,9 +2,17 @@ import os
 import anthropic
 from .base import LLMAdapter, Message, LLMConfig, LLMResponse
 
-
 class AnthropicAdapter(LLMAdapter):
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str = None):
+        # Lee la API key desde st.secrets (Streamlit Cloud) o variable de entorno
+        if api_key is None:
+            try:
+                import streamlit as st
+                api_key = st.secrets.get("ANTHROPIC_API_KEY")
+            except Exception:
+                pass
+        if not api_key:
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
         self.client = anthropic.Anthropic(api_key=api_key)
         self.langfuse = None
         try:
@@ -27,20 +35,17 @@ class AnthropicAdapter(LLMAdapter):
                 )
             except Exception:
                 pass
-
         response = self.client.messages.create(
             model=config.model,
             max_tokens=config.max_tokens,
             temperature=config.temperature,
             messages=[{"role": m.role, "content": m.content} for m in messages]
         )
-
         result = LLMResponse(
             content=response.content[0].text,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens
         )
-
         if self.langfuse:
             try:
                 self.langfuse.create_event(
@@ -55,5 +60,4 @@ class AnthropicAdapter(LLMAdapter):
                 self.langfuse.flush()
             except Exception:
                 pass
-
         return result
