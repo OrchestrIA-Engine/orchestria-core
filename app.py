@@ -1,10 +1,11 @@
 import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import streamlit as st
 import json, time, tempfile
 
-from parsers.genesys_yaml_parser import GenesysYAMLParser
-from agents.analyzer import IVRAnalyzer
-from agents.documentor import IVRDocumentor
+from src.parsers.genesys_yaml_parser import GenesysYAMLParser
+from src.agents.analyzer import IVRAnalyzer
+from src.agents.documentor import IVRDocumentor
 
 st.set_page_config(page_title='OrchestrIA', layout='wide', page_icon='🎙️',
                    initial_sidebar_state='collapsed')
