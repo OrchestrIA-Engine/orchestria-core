@@ -4,6 +4,9 @@ import sys, os, json, time, tempfile
 import pathlib as _pathlib, sys as _sys
 _sys.path.insert(0, str(_pathlib.Path(__file__).parent.resolve()))
 
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.getcwd())
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)) if "__file__" in dir() else _os.getcwd())
 from src.parsers.genesys_yaml_parser import GenesysYAMLParser
 from src.agents.analyzer import IVRAnalyzer
 from src.agents.documentor import IVRDocumentor
