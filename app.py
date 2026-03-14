@@ -1,11 +1,8 @@
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else os.getcwd())
 import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import streamlit as st
 import sys as _sys, os as _os
-_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 import sys, os, json, time, tempfile
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, '.')
 from src.parsers.genesys_yaml_parser import GenesysYAMLParser
 from src.agents.analyzer import IVRAnalyzer
 from src.agents.documentor import IVRDocumentor
