@@ -1,5 +1,6 @@
 import streamlit as st
 import sys, os, json, time, tempfile
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, '.')
 from src.parsers.genesys_yaml_parser import GenesysYAMLParser
 from src.agents.analyzer import IVRAnalyzer
