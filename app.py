@@ -174,12 +174,11 @@ def generar_pdf_bytes(flow, analysis):
     if dead:
         mig_drivers.append(f"{len(dead)} dead end(s) — requieren rediseño antes de migrar")
     
-    # Fusionar con flags existentes sin duplicar
-    existing_flags = list(enriched.get('inventory', {}).get('migration_risk_flags', []))
-    all_flags = existing_flags + [d for d in mig_drivers if d not in existing_flags]
-    if 'inventory' in enriched:
+    # Reemplazar flags con versión enriquecida (sin duplicar)
+    # Los drivers textuales son más informativos que los flags originales
+    if 'inventory' in enriched and mig_drivers:
         enriched['inventory'] = dict(enriched['inventory'])
-        enriched['inventory']['migration_risk_flags'] = all_flags
+        enriched['inventory']['migration_risk_flags'] = mig_drivers
 
     with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp: path = tmp.name
     IVRDocumentor().generate_pdf(flow, enriched, path)

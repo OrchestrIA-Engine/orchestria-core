@@ -289,8 +289,9 @@ class FlowInventoryExtractor:
         if apis > 0:
             flags.append(f'{apis} integración(es) de datos — requieren reconexión en Cloud')
 
-        # Auth
-        if auth > 2:     d2 += 8
+        # Auth — cada servicio requiere validación OAuth/SAML + certificados en Cloud
+        if auth > 3:     d2 += 12
+        elif auth > 1:   d2 += 8
         elif auth > 0:   d2 += 5
         if auth > 0:
             flags.append(f'{auth} servicio(s) de auth — validar compatibilidad con Genesys Cloud Auth')
@@ -346,10 +347,11 @@ class FlowInventoryExtractor:
         if langs > 1:
             flags.append(f'{langs} idiomas — TTS providers y localizaciones a verificar en Cloud')
 
-        # Número de colas
-        if qcount > 10:  d4 += 5
-        elif qcount > 5: d4 += 3
-        elif qcount > 2: d4 += 1
+        # Número de colas — cada cola requiere config en Cloud (queue routing, skills, IVR DN)
+        if qcount > 10:  d4 += 7
+        elif qcount > 5: d4 += 5
+        elif qcount > 2: d4 += 3
+        elif qcount > 0: d4 += 1
 
         # Voicemail
         if vm > 0:
