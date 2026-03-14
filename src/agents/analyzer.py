@@ -54,6 +54,10 @@ class IVRAnalyzer:
             import streamlit as st
             api_key = st.secrets.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
         except Exception:
+            try:
+            import streamlit as st
+            api_key = st.secrets.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
+        except Exception:
             api_key = os.environ.get("ANTHROPIC_API_KEY")
         self.llm = AnthropicAdapter(api_key=api_key)
         self.config = LLMConfig(model="claude-sonnet-4-6", max_tokens=2000, temperature=0.0)
