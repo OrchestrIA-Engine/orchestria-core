@@ -1,7 +1,9 @@
-import sys, os; sys.path.insert(0, os.getcwd()); sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) if '__file__' in globals() else '.'))
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import sys, os
 import streamlit as st
-import sys as _sys, os as _os
 import sys, os, json, time, tempfile
 from src.parsers.genesys_yaml_parser import GenesysYAMLParser
 from src.agents.analyzer import IVRAnalyzer
