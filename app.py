@@ -1,4 +1,4 @@
-import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else os.getcwd())
+import sys, os; sys.path.insert(0, os.getcwd()); sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) if '__file__' in globals() else '.'))
 import sys, os
 import streamlit as st
 import sys as _sys, os as _os
