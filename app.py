@@ -1,3 +1,5 @@
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import streamlit as st
 import sys, os, json, time, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
