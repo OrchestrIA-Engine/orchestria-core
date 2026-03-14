@@ -1,19 +1,12 @@
-import streamlit as st
-import sys, os, json, time, tempfile
-
 import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
+sys.path.insert(0, os.path.join(os.getcwd(), "src"))
+import streamlit as st
+import json, time, tempfile
 
-# Streamlit Cloud monta el repo en /mount/src/<repo-name>/
-# Añadimos todas las rutas posibles para garantizar que src.* sea importable
-_here = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else os.getcwd()
-for _p in [_here, os.getcwd(), '/mount/src/orchestria-core', os.path.join(os.getcwd(), 'orchestria-core')]:
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
-del _here, _p
-
-from src.parsers.genesys_yaml_parser import GenesysYAMLParser
-from src.agents.analyzer import IVRAnalyzer
-from src.agents.documentor import IVRDocumentor
+from parsers.genesys_yaml_parser import GenesysYAMLParser
+from agents.analyzer import IVRAnalyzer
+from agents.documentor import IVRDocumentor
 
 st.set_page_config(page_title='OrchestrIA', layout='wide', page_icon='🎙️',
                    initial_sidebar_state='collapsed')
