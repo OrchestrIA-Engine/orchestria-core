@@ -526,7 +526,8 @@ def set_cols(ws, widths):
 
 def bg_all(ws, rows=400, cols=20):
     for row in ws.iter_rows(min_row=1,max_row=rows,min_col=1,max_col=cols):
-        for c in row: c.fill=hf(BG)
+        for c in row:
+            c.fill = hf(BG)
 
 def section_header(ws, row, col_start, col_end, label, color=TEAL):
     ws.merge_cells(f"{get_column_letter(col_start)}{row}:{get_column_letter(col_end)}{row}")
