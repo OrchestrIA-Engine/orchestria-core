@@ -22,68 +22,108 @@ st.html("""
 /* ── RESET & BASE ─────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 html, body, [data-testid="stApp"] {
-    background: #080A0F !important;
-    color: #CDD5E0 !important;
+    background: #06080C !important;
+    color: #C8D3E0 !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
-[data-testid="stAppViewContainer"] > .main { background: #080A0F !important; }
-.block-container {
-    padding: 2.5rem 3rem 6rem !important;
-    max-width: 1400px !important;
-}
+[data-testid="stAppViewContainer"] > .main { background: #06080C !important; }
+.block-container { padding: 3rem 3.5rem 8rem !important; max-width: 1400px !important; }
 #MainMenu, footer, header, [data-testid="stToolbar"],
 [data-testid="stDecoration"], [data-testid="stStatusWidget"] { display: none !important; }
 h1,h2,h3 { font-family: 'Syne', sans-serif !important; }
-hr { border: none !important; border-top: 1px solid #111620 !important; margin: 2rem 0 !important; }
+hr { border: none !important; border-top: 1px solid #0C1118 !important; margin: 2.5rem 0 !important; }
 
 /* ── HEADER ──────────────────────────────────────────────────────────────── */
 .o-header {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
-    padding: 0 0 2rem;
-    margin-bottom: 2.5rem;
-    border-bottom: 1px solid #111620;
+    padding: 0 0 2.5rem;
+    margin-bottom: 3.5rem;
+    border-bottom: 1px solid #0C1118;
 }
-.o-logo {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
+.o-logo { display: flex; flex-direction: column; gap: 0.4rem; }
 .o-logo-wordmark {
     font-family: 'Syne', sans-serif;
-    font-size: 1.35rem;
+    font-size: 1.65rem;
     font-weight: 800;
-    color: #EEF2F8;
-    letter-spacing: -0.04em;
+    color: #F0F6FF;
+    letter-spacing: -0.05em;
     line-height: 1;
 }
 .o-logo-wordmark em { color: #00D4AA; font-style: normal; }
-.o-logo-badge {
+.o-logo-descriptor {
     font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    color: #2E3A4E;
-    letter-spacing: 0.12em;
+    font-size: 0.58rem;
+    color: #1E2E42;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    padding: 2px 7px;
-    border: 1px solid #1A2233;
-    border-radius: 3px;
-    background: #0C0F16;
+    line-height: 1;
 }
 .o-header-meta {
     font-family: 'DM Mono', monospace;
-    font-size: 0.62rem;
-    color: #2A3650;
+    font-size: 0.55rem;
+    color: #131C28;
     letter-spacing: 0.1em;
     text-transform: uppercase;
 }
+
+/* ── STICKY RESULTS NAV ───────────────────────────────────────────────────── */
+.o-results-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #06080Cee;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid #0C1118;
+    padding: 0.6rem 0;
+    margin: 0 -3.5rem 2rem;
+    padding-left: 3.5rem;
+    padding-right: 3.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    animation: fadeSlideDown 0.3s ease;
+}
+@keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.o-nav-item {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    color: #1E2E42;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.4rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.o-nav-item:hover { color: #6B8099; background: #0C1118; }
+.o-nav-item.active { color: #00D4AA; }
+.o-nav-score {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.3rem 0.75rem;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+}
+.o-nav-sep { color: #0C1118; margin: 0 0.25rem; font-size: 0.7rem; }
+
+/* ── SECTION ANCHORS ─────────────────────────────────────────────────────── */
+.o-anchor { scroll-margin-top: 60px; }
 
 /* ── MODE SELECTOR ───────────────────────────────────────────────────────── */
 .stRadio > div {
     flex-direction: row !important;
     gap: 0 !important;
-    background: #0C0F16 !important;
-    border: 1px solid #161D2B !important;
+    background: #0A0D14 !important;
+    border: 1px solid #0F1620 !important;
     border-radius: 7px !important;
     padding: 3px !important;
     display: inline-flex !important;
@@ -93,239 +133,289 @@ hr { border: none !important; border-top: 1px solid #111620 !important; margin: 
     background: transparent !important;
     border: none !important;
     border-radius: 5px !important;
-    padding: 6px 20px !important;
+    padding: 6px 22px !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 0.8rem !important;
+    font-size: 0.78rem !important;
     font-weight: 500 !important;
-    color: #3A4A61 !important;
+    color: #232E3E !important;
     cursor: pointer !important;
-    transition: all 0.18s ease !important;
+    transition: all 0.2s ease !important;
     white-space: nowrap !important;
     letter-spacing: 0.01em !important;
 }
 .stRadio > div > label:has(input:checked) {
-    background: #161D2B !important;
-    color: #CDD5E0 !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+    background: #0F1620 !important;
+    color: #C8D3E0 !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4) !important;
 }
 .stRadio > div > label > div:first-child { display: none !important; }
+
+/* ── MODE SELECTOR SPACING ───────────────────────────────────────────────── */
+div[data-testid="stHorizontalBlock"] + div[data-testid="stVerticalBlock"] {
+    margin-top: 2.5rem !important;
+}
 
 /* ── FILE UPLOADER ───────────────────────────────────────────────────────── */
 [data-testid="stFileUploader"] {
     background: transparent !important;
-    border: 1px dashed #1A2233 !important;
+    border: 1px dashed #0F1825 !important;
     border-radius: 10px !important;
     padding: 0 !important;
-    transition: border-color 0.2s !important;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
 }
 [data-testid="stFileUploader"]:hover {
-    border-color: #00D4AA30 !important;
+    border-color: #00D4AA20 !important;
+    box-shadow: 0 0 0 4px #00D4AA05 !important;
 }
 [data-testid="stFileUploaderDropzone"] {
     background: transparent !important;
     border: none !important;
-    padding: 2rem !important;
+    padding: 2.25rem !important;
 }
 [data-testid="stFileUploaderDropzoneInstructions"] p {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    color: #2E3A4E !important;
-    font-size: 0.8rem !important;
+    color: #1A2535 !important;
+    font-size: 0.78rem !important;
 }
 [data-testid="stFileUploaderDropzoneInstructions"] small {
-    color: #1E2840 !important;
-    font-size: 0.7rem !important;
+    color: #111C2B !important; font-size: 0.68rem !important;
 }
 
-/* ── TEXTAREA (CODE EDITOR) ──────────────────────────────────────────────── */
+/* ── CODE EDITOR ─────────────────────────────────────────────────────────── */
+.stTextArea { margin-top: 1.5rem !important; }
 .stTextArea textarea {
-    background: #0C0F16 !important;
-    border: 1px solid #161D2B !important;
-    border-radius: 9px !important;
-    color: #7A90AB !important;
+    background: #080B11 !important;
+    border: 1px solid #0F1825 !important;
+    border-left: 2px solid #0F1825 !important;
+    border-radius: 8px !important;
+    color: #6B8099 !important;
     font-family: 'DM Mono', monospace !important;
-    font-size: 0.75rem !important;
-    line-height: 1.7 !important;
-    padding: 1.1rem 1.25rem !important;
-    transition: border-color 0.2s !important;
+    font-size: 0.78rem !important;
+    line-height: 1.8 !important;
+    padding: 1.25rem 1.4rem !important;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+    caret-color: #00D4AA !important;
+    tab-size: 2 !important;
 }
 .stTextArea textarea:focus {
-    border-color: #00D4AA25 !important;
+    border-color: #00D4AA20 !important;
+    border-left-color: #00D4AA !important;
     outline: none !important;
-    box-shadow: 0 0 0 1px #00D4AA10 !important;
+    box-shadow: 0 0 0 3px #00D4AA08 !important;
+    color: #8BA0B8 !important;
 }
-.stTextArea textarea::placeholder { color: #1E2840 !important; }
+.stTextArea textarea::placeholder { color: #0F1825 !important; opacity: 1 !important; }
 
 /* ── BUTTONS ─────────────────────────────────────────────────────────────── */
 .stButton > button {
     background: #00D4AA !important;
-    color: #060810 !important;
+    color: #050810 !important;
     border: none !important;
     border-radius: 7px !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 0.83rem !important;
+    font-size: 0.82rem !important;
     font-weight: 600 !important;
-    padding: 0.6rem 1.5rem !important;
+    padding: 0.7rem 1.6rem !important;
     letter-spacing: 0.01em !important;
-    transition: all 0.15s ease !important;
+    transition: all 0.18s ease !important;
+    position: relative !important;
+    overflow: hidden !important;
 }
-.stButton > button:hover {
-    background: #00BF9A !important;
+.stButton > button::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important; left: -100% !important;
+    width: 100% !important; height: 100% !important;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent) !important;
+    transition: left 0.4s ease !important;
+}
+.stButton > button:hover { 
+    background: #00C49E !important;
     transform: translateY(-1px) !important;
-    box-shadow: 0 4px 16px rgba(0,212,170,0.2) !important;
+    box-shadow: 0 6px 20px rgba(0,212,170,0.22) !important;
 }
+.stButton > button:hover::after { left: 100% !important; }
 .stButton > button:focus {
-    box-shadow: 0 0 0 2px rgba(0,212,170,0.3) !important;
+    box-shadow: 0 0 0 3px rgba(0,212,170,0.25) !important;
+    outline: none !important;
 }
 .stDownloadButton > button {
     background: transparent !important;
     color: #00D4AA !important;
-    border: 1px solid #00D4AA20 !important;
+    border: 1px solid #00D4AA18 !important;
     border-radius: 7px !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 0.78rem !important;
+    font-size: 0.76rem !important;
     font-weight: 500 !important;
     padding: 0.5rem 1.2rem !important;
-    transition: all 0.15s !important;
+    transition: all 0.15s ease !important;
 }
 .stDownloadButton > button:hover {
     background: #00D4AA08 !important;
-    border-color: #00D4AA35 !important;
+    border-color: #00D4AA30 !important;
+    transform: translateY(-1px) !important;
 }
 
 /* ── METRICS ─────────────────────────────────────────────────────────────── */
 div[data-testid="metric-container"] {
     background: transparent !important;
     border: none !important;
-    border-bottom: 1px solid #111620 !important;
+    border-bottom: 1px solid #0C1118 !important;
     border-radius: 0 !important;
-    padding: 0.75rem 0 !important;
+    padding: 0.85rem 0 !important;
 }
 div[data-testid="metric-container"] label {
     font-family: 'DM Mono', monospace !important;
-    font-size: 0.58rem !important;
-    color: #2A3650 !important;
+    font-size: 0.55rem !important;
+    color: #1A2535 !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.14em !important;
+    letter-spacing: 0.16em !important;
 }
 div[data-testid="metric-container"] [data-testid="stMetricValue"] {
     font-family: 'Syne', sans-serif !important;
-    font-size: 1.4rem !important;
+    font-size: 1.35rem !important;
     font-weight: 700 !important;
-    color: #CDD5E0 !important;
+    color: #C8D3E0 !important;
 }
 
 /* ── PROGRESS ────────────────────────────────────────────────────────────── */
 .stProgress > div > div {
-    background: #0C0F16 !important;
-    border-radius: 2px !important;
-    height: 2px !important;
+    background: #0A0D14 !important;
+    border-radius: 1px !important;
+    height: 1.5px !important;
 }
 .stProgress > div > div > div {
-    background: linear-gradient(90deg, #00D4AA, #0090FF) !important;
-    border-radius: 2px !important;
-    transition: width 0.4s ease !important;
+    background: linear-gradient(90deg, #00D4AA, #0080FF, #9B72F5) !important;
+    border-radius: 1px !important;
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1) !important;
 }
 
 /* ── EXPANDER ────────────────────────────────────────────────────────────── */
 .streamlit-expanderHeader {
     background: transparent !important;
     border: none !important;
-    border-bottom: 1px solid #111620 !important;
+    border-bottom: 1px solid #0C1118 !important;
     border-radius: 0 !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 0.82rem !important;
-    color: #6B7E97 !important;
+    font-size: 0.8rem !important;
+    color: #3A4E64 !important;
     padding: 0.75rem 0 !important;
     transition: color 0.15s !important;
 }
-.streamlit-expanderHeader:hover { color: #CDD5E0 !important; }
+.streamlit-expanderHeader:hover { color: #C8D3E0 !important; }
 .streamlit-expanderContent {
     background: transparent !important;
     border: none !important;
-    border-bottom: 1px solid #111620 !important;
+    border-bottom: 1px solid #0C1118 !important;
     border-radius: 0 !important;
     padding: 1.25rem 0 !important;
 }
 
-/* ── ALERTS ──────────────────────────────────────────────────────────────── */
-.stAlert {
-    background: transparent !important;
-    border: none !important;
-    border-left: 2px solid !important;
-    border-radius: 0 !important;
-    padding: 0.6rem 0.9rem !important;
+/* ── CAPABILITY DOMAINS (right panel) ───────────────────────────────────── */
+.o-capability-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 0.7rem 0.5rem;
+    border-radius: 5px;
+    border-bottom: 1px solid #0A0F18;
+    transition: background 0.15s ease;
+    cursor: default;
 }
-div[data-testid="stNotification"] {
-    background: transparent !important;
+.o-capability-row:hover { background: #0A0D14; }
+.o-capability-name {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.8rem;
+    color: #3A5070;
+    font-weight: 500;
+    letter-spacing: 0.01em;
 }
-
-/* ── CUSTOM TYPOGRAPHY ───────────────────────────────────────────────────── */
-.o-label {
+.o-capability-desc {
     font-family: 'DM Mono', monospace;
     font-size: 0.58rem;
-    color: #2A3650;
+    color: #131C28;
+    margin-top: 2px;
+    line-height: 1.4;
+}
+.o-capability-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+/* ── TYPOGRAPHY ──────────────────────────────────────────────────────────── */
+.o-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem;
+    color: #1A2535;
     text-transform: uppercase;
-    letter-spacing: 0.16em;
-    margin-bottom: 1rem;
+    letter-spacing: 0.18em;
+    margin-bottom: 1.1rem;
     display: block;
+}
+.lbl {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem;
+    color: #1A2535;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-bottom: 1.1rem;
+    display: block;
+}
+.o-helper {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.7rem;
+    color: #1A2535;
+    margin-top: 0.6rem;
+    letter-spacing: 0.01em;
+}
+.o-meta-sep { color: #0C1118; margin: 0 0.35rem; }
+.o-section-divider {
+    border: none;
+    border-top: 1px solid #0C1118;
+    margin: 2.5rem 0;
 }
 .o-section-title {
     font-family: 'Syne', sans-serif;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    color: #4A5E78;
+    color: #2A3E56;
     text-transform: uppercase;
     letter-spacing: 0.12em;
     margin-bottom: 1.25rem;
     display: block;
 }
-.lbl {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.58rem;
-    color: #2A3650;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    margin-bottom: 1rem;
-    display: block;
-}
 
-/* ── INLINE METADATA ─────────────────────────────────────────────────────── */
-.o-meta {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    color: #2A3650;
-    letter-spacing: 0.04em;
-}
-.o-meta-sep { color: #1A2233; margin: 0 0.35rem; }
-
-/* ── CHIPS (minimal) ─────────────────────────────────────────────────────── */
+/* ── CHIPS ───────────────────────────────────────────────────────────────── */
 .orch-chip {
     display: inline-flex;
     align-items: center;
     background: transparent;
-    border: 1px solid #161D2B;
+    border: 1px solid #0C1520;
     border-radius: 4px;
     padding: 2px 8px;
     font-family: 'DM Mono', monospace;
-    font-size: 0.62rem;
-    color: #2A3650;
+    font-size: 0.6rem;
+    color: #1A2535;
     margin: 2px;
     letter-spacing: 0.04em;
 }
-.chip-teal { color: #00D4AA; border-color: #00D4AA18; }
-.chip-blue { color: #0090FF; border-color: #0090FF18; }
+.chip-teal { color: #00D4AA; border-color: #00D4AA15; }
+.chip-blue { color: #0080FF; border-color: #0080FF15; }
 .compat-chip {
     font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
+    font-size: 0.58rem;
     background: transparent;
-    border: 1px solid #111620;
+    border: 1px solid #0A1018;
     border-radius: 3px;
     padding: 2px 7px;
-    color: #222D42;
+    color: #151E2C;
     letter-spacing: 0.04em;
 }
 
-/* ── BADGES (migration level) ────────────────────────────────────────────── */
+/* ── BADGES ──────────────────────────────────────────────────────────────── */
 .orch-badge {
     display: inline-flex;
     align-items: center;
@@ -333,84 +423,31 @@ div[data-testid="stNotification"] {
     padding: 2px 9px;
     border-radius: 20px;
     font-family: 'DM Mono', monospace;
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     font-weight: 500;
     letter-spacing: 0.06em;
     text-transform: uppercase;
 }
-.badge-simple   { background: #00D4AA0D; color: #00D4AA; border: 1px solid #00D4AA20; }
-.badge-moderado { background: #D299220D; color: #D29922; border: 1px solid #D2992220; }
-.badge-complejo { background: #F0883E0D; color: #F0883E; border: 1px solid #F0883E20; }
-.badge-muy      { background: #F851490D; color: #F85149; border: 1px solid #F8514920; }
+.badge-simple   { background: #00D4AA0C; color: #00D4AA; border: 1px solid #00D4AA1C; }
+.badge-moderado { background: #D299220C; color: #D29922; border: 1px solid #D299221C; }
+.badge-complejo { background: #F0883E0C; color: #F0883E; border: 1px solid #F0883E1C; }
+.badge-muy      { background: #F851490C; color: #F85149; border: 1px solid #F851491C; }
 
 /* ── PHASE STEPS ─────────────────────────────────────────────────────────── */
 .ph-done {
-    color: #2A3650;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.7rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 5px 0;
-    border-bottom: 1px solid #0E1320;
+    color: #1A2535; font-family: 'DM Mono', monospace; font-size: 0.68rem;
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 4px 0; border-bottom: 1px solid #090D14;
 }
 .ph-active {
-    color: #CDD5E0;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.7rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 5px 0;
-    border-bottom: 1px solid #0E1320;
+    color: #C8D3E0; font-family: 'DM Mono', monospace; font-size: 0.68rem;
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 4px 0; border-bottom: 1px solid #090D14;
 }
 .ph-pend {
-    color: #161D2B;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.7rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 5px 0;
-    border-bottom: 1px solid #0E1320;
-}
-
-/* ── CAPABILITY DOMAINS ──────────────────────────────────────────────────── */
-.o-capability-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.55rem 0;
-    border-bottom: 1px solid #0E1320;
-}
-.o-capability-name {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 0.78rem;
-    color: #3A4A61;
-    font-weight: 500;
-}
-.o-capability-dot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #1A2840;
-    flex-shrink: 0;
-}
-
-/* ── RESULT DIVIDERS ─────────────────────────────────────────────────────── */
-.o-section-divider {
-    border: none;
-    border-top: 1px solid #0E1320;
-    margin: 1.75rem 0;
-}
-
-/* ── HELPER TEXT ─────────────────────────────────────────────────────────── */
-.o-helper {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 0.72rem;
-    color: #1E2840;
-    margin-top: 0.5rem;
-    letter-spacing: 0.01em;
+    color: #0F1825; font-family: 'DM Mono', monospace; font-size: 0.68rem;
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 4px 0; border-bottom: 1px solid #090D14;
 }
 </style>
 """)
@@ -501,43 +538,25 @@ def migration_badge(ml):
     return f'<span class="orch-badge {cls}">● {ml}</span>'
 
 def empty_state_panel() -> str:
-    """Capability domains panel — minimal, Linear-style."""
+    """Capability domains — refined with color dots and hover."""
     domains = [
-        ("Structural Integrity",   "Flow graph, dead ends, depth analysis"),
-        ("Flow Inventory",         "Node types, counts, entry mapping"),
-        ("Dependency Mapping",     "APIs, auth services, TTS variables"),
-        ("Migration Complexity",   "5-dimension scoring, effort estimate"),
-        ("API / TTS Detection",    "Data dips, auth patterns, dynamic vars"),
-        ("Edge Case Coverage",     "Missing fallbacks, timeout gaps, loops"),
+        ("Structural Integrity",  "Flow graph · dead ends · depth",     "#00D4AA"),
+        ("Flow Inventory",        "Node types · counts · entry map",     "#0080FF"),
+        ("Dependency Mapping",    "APIs · auth · TTS variables",         "#F0883E"),
+        ("Migration Complexity",  "5D scoring · effort estimate",        "#D29922"),
+        ("API / TTS Detection",   "Data dips · auth patterns",          "#9B72F5"),
+        ("Edge Case Coverage",    "Fallbacks · timeouts · loops",        "#F85149"),
     ]
     rows = ""
-    for name, desc in domains:
+    for name, desc, color in domains:
         rows += (
-            f'<div class="o-capability-row">'            f'<div>'            f'<div class="o-capability-name">{name}</div>'            f'<div style="font-family:DM Mono,monospace;font-size:0.6rem;color:#1E2840;margin-top:1px;">{desc}</div>'            f'</div>'            f'<div class="o-capability-dot"></div>'            f'</div>'
+            f'<div class="o-capability-row">'            f'<div>'            f'<div class="o-capability-name">{name}</div>'            f'<div class="o-capability-desc">{desc}</div>'            f'</div>'            f'<div class="o-capability-dot" style="background:{color};opacity:0.4;"></div>'            f'</div>'
         )
     return (
-        '<div style="padding-top:0.5rem;">'        '<div style="font-family:DM Mono,monospace;font-size:0.58rem;color:#2A3650;'        'letter-spacing:0.14em;text-transform:uppercase;margin-bottom:1.25rem;">'        'Analysis Domains</div>'        + rows +
+        '<div style="padding-top:0.25rem;">'        '<div class="o-label" style="margin-bottom:1.5rem;">Analysis Domains</div>'        + rows +
         '</div>'
     )
 
-
-
-def hf(c): return PatternFill("solid", fgColor=c)
-def bb(c="1C2030"): return Border(bottom=Side(style="thin", color=c))
-def safe_name(s): return re.sub(r'[\\/*?:\[\]]','_',s)[:31]
-def set_cols(ws, widths):
-    for i,w in enumerate(widths,1):
-        ws.column_dimensions[get_column_letter(i)].width=w
-def bg_all(ws, rows=400, cols=20):
-    for row in ws.iter_rows(min_row=1,max_row=rows,min_col=1,max_col=cols):
-        for c in row:
-            c.fill = hf("07080B")
-
-# ── COLOR CONSTANTS ──────────────────────────────────────────────────────────
-BG="07080B"; SURFACE="0E1118"; CARD="161B22"; BORDER="1C2030"
-TEXT="E8EDF5"; DIM="4B5568"; WHITE="FFFFFF"
-TEAL="00D4AA"; RED="F85149"; YELLOW="D29922"; ORANGE="F0883E"
-BLUE="00A8FF"; PURPLE="A78BFA"; GREEN="3FB950"
 
 def score_color(s): return TEAL if s>=70 else YELLOW if s>=40 else RED
 def mig_color(l): return {"SIMPLE":TEAL,"MODERADO":YELLOW,"COMPLEJO":ORANGE,"MUY COMPLEJO":RED}.get(l,"4B5568")
@@ -1985,6 +2004,7 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
         for i in imps:
             st.success(i)
 
+    st.markdown('<div id="o-arch" class="o-anchor"></div>', unsafe_allow_html=True)
     # ── FLOW ARCHITECTURE GRAPH ───────────────────────────────────────────────
     if flow and flow.nodes:
         st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
@@ -2012,6 +2032,7 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
                     '■ External dependency — API · Auth · Data dip</span>',
                     unsafe_allow_html=True)
 
+    st.markdown('<div id="o-inv" class="o-anchor"></div>', unsafe_allow_html=True)
     # ── FLOW INVENTORY ────────────────────────────────────────────────────────
     if inv:
         st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
@@ -2038,6 +2059,7 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
             '<div style="display:flex;flex-wrap:wrap;gap:0.2rem;">'+chips+'</div>',
             unsafe_allow_html=True)
 
+    st.markdown('<div id="o-mig" class="o-anchor"></div>', unsafe_allow_html=True)
     # ── MIGRATION TO CLOUD ────────────────────────────────────────────────────
     if inv:
         ml        = inv.get('migration_level', 'SIMPLE')
@@ -2404,15 +2426,15 @@ st.markdown(
     '<div class="o-header">'
     '<div class="o-logo">'
     '<span class="o-logo-wordmark">Orchestr<em>IA</em></span>'
-    '<span class="o-logo-badge">IVR · IA</span>'
+    '<span class="o-logo-descriptor">IVR &nbsp;·&nbsp; Agentic Intelligence Engine</span>'
     '</div>'
-    '<span class="o-header-meta">Genesys Flow Intelligence&nbsp;&nbsp;·&nbsp;&nbsp;YAML · JSON · XML</span>'
+    '<span class="o-header-meta">YAML · JSON · XML · Genesys Architect</span>'
     '</div>',
     unsafe_allow_html=True)
 
 modo = st.radio('', ['Individual Flow', 'Portfolio Batch'],
                 horizontal=True, label_visibility='collapsed')
-st.markdown('<div style="margin-top:2rem;"></div>', unsafe_allow_html=True)
+st.markdown('<div style="margin-top:3rem;"></div>', unsafe_allow_html=True)
 
 YAML_EXAMPLE = '''inboundCall:
   name: "Flujo Banca Retail"
@@ -2427,7 +2449,13 @@ if modo == 'Individual Flow':
     col_l, col_r = st.columns([13, 7], gap='large')
 
     with col_l:
-        st.markdown('<span class="o-label">Flow Input</span>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">'
+            '<span class="o-label" style="margin:0;">Flow Input</span>'
+            '<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#0F1825;letter-spacing:0.1em;">'
+            'YAML · JSON · XML</span>'
+            '</div>',
+            unsafe_allow_html=True)
         uploaded = st.file_uploader(
             '', type=['yaml','yml','json','xml'],
             label_visibility='collapsed')
@@ -2509,7 +2537,21 @@ if modo == 'Individual Flow':
             st.rerun()
 
     if st.session_state.analysis and modo == 'Individual Flow':
-        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+        # Sticky nav
+        _s = st.session_state.analysis.get('score', 0)
+        _sc = '#00D4AA' if _s >= 70 else '#D29922' if _s >= 40 else '#F85149'
+        st.markdown(
+            f'<div class="o-results-nav">'
+            f'<span class="o-nav-score" style="color:{_sc};">■ {_s}/100</span>'
+            f'<span class="o-nav-sep">|</span>'
+            f'<a class="o-nav-item" href="#o-arch">Architecture</a>'
+            f'<a class="o-nav-item" href="#o-inv">Inventory</a>'
+            f'<a class="o-nav-item" href="#o-mig">Migration</a>'
+            f'<span style="flex:1;"></span>'
+            f'<a class="o-nav-item" href="#o-export" style="color:#1A3040;">↓ Export</a>'
+            f'</div>',
+            unsafe_allow_html=True)
+        st.markdown('<div id="o-export"></div>', unsafe_allow_html=True)
         render_export_buttons(
             st.session_state.analysis,
             st.session_state.flow,
@@ -2608,8 +2650,20 @@ else:
         ok = sorted([r for r in results if 'error' not in r],
                     key=lambda x: x.get('score',0), reverse=True)
 
+        # Sticky nav portfolio
+        st.markdown(
+            '<div class="o-results-nav">'
+            '<a class="o-nav-item active" href="#o-psummary">Summary</a>'
+            '<a class="o-nav-item" href="#o-pmap">Intelligence Map</a>'
+            '<a class="o-nav-item" href="#o-plist">Flow List</a>'
+            '<span style="flex:1;"></span>'
+            '<a class="o-nav-item" href="#o-pexport" style="color:#1A3040;">↓ Export</a>'
+            '</div>',
+            unsafe_allow_html=True)
+        st.markdown('<div id="o-psummary" class="o-anchor"></div>', unsafe_allow_html=True)
         st.markdown(portfolio_summary_card(results), unsafe_allow_html=True)
 
+        st.markdown('<div id="o-pmap" class="o-anchor"></div>', unsafe_allow_html=True)
         # Portfolio Intelligence Map
         pmap_svg = portfolio_intelligence_map(ok)
         if pmap_svg:
@@ -2624,6 +2678,7 @@ else:
                 f'overflow:hidden;padding:0.5rem;">{pmap_svg}</div>',
                 unsafe_allow_html=True)
 
+        st.markdown('<div id="o-pexport" class="o-anchor"></div>', unsafe_allow_html=True)
         render_export_buttons(
             None, None,
             results=results,
@@ -2631,6 +2686,7 @@ else:
             raw_yamls=st.session_state.get('batch_raw_yamls',{}),
             mode='portfolio')
 
+        st.markdown('<div id="o-plist" class="o-anchor"></div>', unsafe_allow_html=True)
         st.markdown(
             f'<div style="margin:1.5rem 0 0.75rem;" class="o-label">'            f'Portfolio · {len(ok)} flows · ranked by quality score</div>',
             unsafe_allow_html=True)
