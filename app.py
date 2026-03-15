@@ -2277,6 +2277,128 @@ def flow_architecture_graph(flow, inv: dict, overlay: str = "structure") -> str:
     return svg
 
 
+
+def portfolio_intelligence_map(results: list) -> str:
+    """
+    Scatter plot — Portfolio Intelligence Map.
+    X: Migration Complexity Score
+    Y: Quality Score
+    Size: total_nodes
+    Color: migration_level
+    4 cuadrantes con narrativa clara.
+    """
+    import json
+    
+    points = []
+    for r in results:
+        if 'error' in r:
+            continue
+        inv = r.get('inventory', {})
+        points.append({
+            'name':  r.get('filename','').replace('.yaml','').replace('.yml','')[:20],
+            'x':     inv.get('migration_complexity_score', 0),
+            'y':     r.get('score', 0),
+            'size':  max(8, min(30, inv.get('total_nodes', 10) * 1.5)),
+            'level': inv.get('migration_level', 'SIMPLE'),
+            'nodes': inv.get('total_nodes', 0),
+        })
+    
+    if not points:
+        return ""
+    
+    LEVEL_COLOR = {
+        'SIMPLE':       '#00D4AA',
+        'MODERADO':     '#D29922',
+        'COMPLEJO':     '#F0883E',
+        'MUY COMPLEJO': '#F85149',
+    }
+
+    W, H = 560, 400
+    PAD = {'l': 50, 'r': 20, 't': 20, 'b': 50}
+    plot_w = W - PAD['l'] - PAD['r']
+    plot_h = H - PAD['t'] - PAD['b']
+
+    def to_px(x, y):
+        px = PAD['l'] + (x / 100) * plot_w
+        py = PAD['t'] + (1 - y / 100) * plot_h
+        return px, py
+
+    # Quadrant backgrounds
+    qx, qy = to_px(50, 50)
+    quadrants = [
+        # x, y, w, h, color, label, sub
+        (PAD['l'], PAD['t'], plot_w//2, plot_h//2,
+         '#00D4AA06', 'QUICK WINS', 'Low complexity · High quality'),
+        (qx, PAD['t'], plot_w - plot_w//2, plot_h//2,
+         '#9B72F506', 'COMPLEX BUT SOLID', 'High complexity · High quality'),
+        (PAD['l'], qy, plot_w//2, plot_h - plot_h//2,
+         '#D2992206', 'IMPROVE FIRST', 'Low complexity · Low quality'),
+        (qx, qy, plot_w - plot_w//2, plot_h - plot_h//2,
+         '#F8514906', 'CRITICAL', 'High complexity · Low quality'),
+    ]
+
+    svg_quads = ""
+    for (rx, ry, rw, rh, col, label, sub) in quadrants:
+        svg_quads += (
+            f'<rect x="{rx}" y="{ry}" width="{rw}" height="{rh}" '            f'fill="{col}" stroke="#0D1320" stroke-width="0.5"/>'            f'<text x="{rx+8}" y="{ry+14}" font-family="DM Mono,monospace" '            f'font-size="7.5" fill="#1E2840" font-weight="600" letter-spacing="0.08em">'            f'{label}</text>'            f'<text x="{rx+8}" y="{ry+24}" font-family="DM Mono,monospace" '            f'font-size="6" fill="#161D2B">{sub}</text>'
+        )
+
+    # Grid lines
+    svg_grid = ""
+    for v in [25, 50, 75]:
+        px, _ = to_px(v, 0)
+        _, py = to_px(0, v)
+        svg_grid += (
+            f'<line x1="{px}" y1="{PAD["t"]}" x2="{px}" y2="{PAD["t"]+plot_h}" '            f'stroke="#0D1320" stroke-width="0.5" stroke-dasharray="3,3"/>'            f'<line x1="{PAD["l"]}" y1="{py}" x2="{PAD["l"]+plot_w}" y2="{py}" '            f'stroke="#0D1320" stroke-width="0.5" stroke-dasharray="3,3"/>'
+        )
+
+    # Axis labels
+    svg_axes = (
+        # X axis
+        f'<text x="{PAD["l"] + plot_w//2}" y="{H-8}" text-anchor="middle" '        f'font-family="DM Mono,monospace" font-size="7" fill="#2A3650" '        f'letter-spacing="0.08em">MIGRATION COMPLEXITY →</text>'
+        # Y axis
+        f'<text x="12" y="{PAD["t"] + plot_h//2}" text-anchor="middle" '        f'font-family="DM Mono,monospace" font-size="7" fill="#2A3650" '        f'letter-spacing="0.08em" '        f'transform="rotate(-90, 12, {PAD["t"] + plot_h//2})">QUALITY SCORE →</text>'
+        # Tick labels X
+        + ''.join([
+            f'<text x="{to_px(v,0)[0]}" y="{PAD["t"]+plot_h+12}" '            f'text-anchor="middle" font-family="DM Mono,monospace" '            f'font-size="7" fill="#1E2840">{v}</text>'
+            for v in [0, 25, 50, 75, 100]
+        ])
+        # Tick labels Y
+        + ''.join([
+            f'<text x="{PAD["l"]-6}" y="{to_px(0,v)[1]+3}" '            f'text-anchor="end" font-family="DM Mono,monospace" '            f'font-size="7" fill="#1E2840">{v}</text>'
+            for v in [0, 25, 50, 75, 100]
+        ])
+    )
+
+    # Points
+    svg_points = ""
+    for p in points:
+        px, py = to_px(p['x'], p['y'])
+        col = LEVEL_COLOR.get(p['level'], '#2A3650')
+        r = p['size'] / 2
+        svg_points += (
+            f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{r:.1f}" '            f'fill="{col}" fill-opacity="0.25" '            f'stroke="{col}" stroke-width="1"/>'            f'<text x="{px:.1f}" y="{py-r-3:.1f}" text-anchor="middle" '            f'font-family="DM Mono,monospace" font-size="6.5" fill="{col}" '            f'opacity="0.9">{p["name"]}</text>'
+        )
+
+    # Legend
+    legend_items = [('SIMPLE','#00D4AA'),('MODERADO','#D29922'),
+                    ('COMPLEJO','#F0883E'),('MUY COMPLEJO','#F85149')]
+    svg_legend = f'<text x="{PAD["l"]}" y="{H-2}" font-family="DM Mono,monospace" '                 f'font-size="6.5" fill="#2A3650">'
+    lx = PAD['l']
+    legend_parts = ""
+    for label, col in legend_items:
+        legend_parts += (
+            f'<circle cx="{lx+4}" cy="{H-6}" r="3" fill="{col}" fill-opacity="0.5" '            f'stroke="{col}" stroke-width="1"/>'            f'<text x="{lx+10}" y="{H-3}" font-family="DM Mono,monospace" '            f'font-size="6.5" fill="{col}">{label}</text>'
+        )
+        lx += len(label) * 5 + 22
+
+    svg = (
+        f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '        f'style="width:100%;max-height:420px;display:block;">'        f'<rect width="{W}" height="{H}" fill="#07080B"/>'        + svg_quads + svg_grid + svg_axes + svg_points + legend_parts +
+        '</svg>'
+    )
+    return svg
+
+
 # ── HEADER ─────────────────────────────────────────────────────────────────────
 st.markdown(
     '<div class="o-header">'
@@ -2487,6 +2609,20 @@ else:
                     key=lambda x: x.get('score',0), reverse=True)
 
         st.markdown(portfolio_summary_card(results), unsafe_allow_html=True)
+
+        # Portfolio Intelligence Map
+        pmap_svg = portfolio_intelligence_map(ok)
+        if pmap_svg:
+            st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+            st.markdown('<span class="o-label">Portfolio Intelligence Map</span>', unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-family:DM Mono,monospace;font-size:0.6rem;color:#2A3650;margin-bottom:0.75rem;">'
+                'X = Migration Complexity · Y = Quality Score · Size = Node count</div>',
+                unsafe_allow_html=True)
+            st.markdown(
+                f'<div style="background:#07080B;border:1px solid #0F1520;border-radius:10px;'
+                f'overflow:hidden;padding:0.5rem;">{pmap_svg}</div>',
+                unsafe_allow_html=True)
 
         render_export_buttons(
             None, None,
