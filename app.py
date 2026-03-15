@@ -91,27 +91,36 @@ hr { border: none !important; border-top: 1px solid #0C1118 !important; margin: 
     to   { opacity: 1; transform: translateY(0); }
 }
 .o-nav-item {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.62rem;
-    color: #1E2E42;
+    font-family: 'DM Mono', monospace !important;
+    font-size: 0.6rem !important;
+    color: #2A3E56 !important;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    padding: 0.4rem 1rem;
+    padding: 0.35rem 0.9rem;
     border-radius: 4px;
     cursor: pointer;
-    text-decoration: none;
+    text-decoration: none !important;
     transition: all 0.15s ease;
     white-space: nowrap;
+    border: 1px solid transparent;
 }
-.o-nav-item:hover { color: #6B8099; background: #0C1118; }
-.o-nav-item.active { color: #00D4AA; }
-.o-nav-score {
+.o-nav-item:hover {
+    color: #8BA8 !important;
+    background: #0C1118;
+    border-color: #0F1825;
+    text-decoration: none !important;
+}
+.o-nav-item:visited { color: #2A3E56 !important; }
+.o-nav-item.active { color: #00D4AA !important; }
+-score {
     font-family: 'Syne', sans-serif;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    padding: 0.3rem 0.75rem;
+    padding: 0.25rem 0.6rem;
     border-radius: 4px;
-    margin-right: 0.5rem;
+    margin-right: 0.6rem;
+    background: #0A0D14;
+    border: 1px solid #0F1825;
 }
 .o-nav-sep { color: #0C1118; margin: 0 0.25rem; font-size: 0.7rem; }
 
@@ -338,11 +347,12 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
     line-height: 1.4;
 }
 .o-capability-dot {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     flex-shrink: 0;
-    margin-top: 5px;
+    margin-top: 6px;
+    opacity: 0.6;
 }
 
 /* ── TYPOGRAPHY ──────────────────────────────────────────────────────────── */
