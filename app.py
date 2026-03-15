@@ -1,12 +1,6 @@
 import sys, os
-# Streamlit Cloud monta el repo en /mount/src/<repo>/
-# Añadimos la ruta hardcodeada que sabemos que funciona
-_d = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else '/mount/src/orchestria-core'
-if _d not in sys.path:
-    sys.path.insert(0, _d)
-if '/mount/src/orchestria-core' not in sys.path:
-    sys.path.insert(0, '/mount/src/orchestria-core')
-del _d
+sys.path.insert(0, os.getcwd())
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import streamlit as st
 import json, time, tempfile
 
