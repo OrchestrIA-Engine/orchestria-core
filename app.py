@@ -1968,6 +1968,33 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
         for i in imps:
             st.success(i)
 
+    # ── FLOW ARCHITECTURE GRAPH ───────────────────────────────────────────────
+    if flow and flow.nodes:
+        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+        st.markdown('<span class="o-label">Flow Architecture</span>', unsafe_allow_html=True)
+        overlay_opts = {'Structure':'structure','Complexity':'complexity','Dependencies':'dependencies'}
+        selected = st.radio('', list(overlay_opts.keys()), horizontal=True,
+                            label_visibility='collapsed', key=f'overlay_{key_prefix}')
+        overlay_key = overlay_opts[selected]
+        svg = flow_architecture_graph(flow, inv, overlay=overlay_key)
+        if svg:
+            st.markdown(
+                f'<div style="background:#07080B;border:1px solid #0F1520;border-radius:10px;'
+                f'overflow:auto;margin-top:0.5rem;">{svg}</div>',
+                unsafe_allow_html=True)
+            if overlay_key == 'complexity':
+                st.markdown(
+                    '<div style="display:flex;gap:1rem;margin-top:0.5rem;">'
+                    '<span class="compat-chip" style="color:#F85149;">■ Dead end</span>'
+                    '<span class="compat-chip" style="color:#F0883E;">■ Missing fallback</span>'
+                    '<span class="compat-chip" style="color:#D29922;">■ Deep node</span>'
+                    '</div>', unsafe_allow_html=True)
+            elif overlay_key == 'dependencies':
+                st.markdown(
+                    '<span class="compat-chip" style="color:#F0883E;">'
+                    '■ External dependency — API · Auth · Data dip</span>',
+                    unsafe_allow_html=True)
+
     # ── FLOW INVENTORY ────────────────────────────────────────────────────────
     if inv:
         st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
@@ -2045,6 +2072,192 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
         else:
             st.success('No migration risks detected')
 
+
+
+
+def flow_architecture_graph(flow, inv: dict, overlay: str = "structure") -> str:
+    """
+    Renderiza el grafo de arquitectura del flujo IVR como SVG.
+    overlay: "structure" | "complexity" | "dependencies"
+    Devuelve HTML con SVG embebido.
+    """
+    if not flow or not flow.nodes:
+        return ""
+
+    nodes = flow.nodes
+    entry = flow.entry_node_id
+
+    # ── LAYOUT: BFS desde entry ────────────────────────────────────────────────
+    import collections
+    
+    # Determinar entry node
+    if not entry:
+        entry = next(iter(nodes))
+    
+    # BFS para asignar niveles (Y) y posición (X) dentro del nivel
+    levels = {}  # node_id -> level
+    queue = collections.deque([(entry, 0)])
+    visited = set()
+    while queue:
+        nid, lvl = queue.popleft()
+        if nid in visited or nid not in nodes:
+            continue
+        visited.add(nid)
+        levels[nid] = lvl
+        for nxt in (nodes[nid].next_nodes or []):
+            if nxt not in visited:
+                queue.append((nxt, lvl + 1))
+    
+    # Nodos no alcanzados desde entry
+    for nid in nodes:
+        if nid not in levels:
+            levels[nid] = max(levels.values(), default=0) + 1
+
+    # Agrupar por nivel
+    level_groups = collections.defaultdict(list)
+    for nid, lvl in levels.items():
+        level_groups[lvl].append(nid)
+
+    max_level = max(level_groups.keys(), default=0)
+    max_width  = max(len(v) for v in level_groups.values())
+
+    # ── DIMENSIONES SVG ────────────────────────────────────────────────────────
+    NODE_W  = 90
+    NODE_H  = 32
+    PAD_X   = 24
+    PAD_Y   = 50
+    MARGIN  = 20
+
+    W = max(max_width * (NODE_W + PAD_X) + MARGIN * 2, 400)
+    H = (max_level + 1) * (NODE_H + PAD_Y) + MARGIN * 2
+
+    # Posiciones de cada nodo
+    positions = {}
+    for lvl, nids in level_groups.items():
+        total_w = len(nids) * (NODE_W + PAD_X) - PAD_X
+        start_x = (W - total_w) / 2
+        for i, nid in enumerate(nids):
+            cx = start_x + i * (NODE_W + PAD_X) + NODE_W / 2
+            cy = MARGIN + lvl * (NODE_H + PAD_Y) + NODE_H / 2
+            positions[nid] = (cx, cy)
+
+    # ── COLORES POR OVERLAY ────────────────────────────────────────────────────
+    TYPE_COLOR = {
+        "entry":       "#00D4AA",
+        "menu":        "#0090FF",
+        "prompt":      "#6B7E97",
+        "input":       "#0090FF",
+        "speech":      "#9B72F5",
+        "condition":   "#D29922",
+        "switch":      "#D29922",
+        "set_variable":"#4A5E78",
+        "transfer":    "#00D4AA",
+        "callback":    "#F0883E",
+        "api_call":    "#F0883E",
+        "loop":        "#9B72F5",
+        "exit":        "#3A4A61",
+        "unknown":     "#2A3650",
+    }
+
+    # Dependencias externas del inventory
+    dep_nodes = set()
+    for nid, n in nodes.items():
+        rc = n.raw_config or {}
+        for action in (rc.get("actions") or []):
+            if isinstance(action, dict) and action.get("type") in ("authenticate","dataQuery","apiCall"):
+                dep_nodes.add(nid)
+        if rc.get("dataQuery") or rc.get("authenticate") or rc.get("apiCall"):
+            dep_nodes.add(nid)
+
+    dead_ends = set(inv.get("dead_ends", []))
+    missing_fb = set(inv.get("missing_fallbacks", []))
+
+    def node_color(nid, ntype_str):
+        if overlay == "complexity":
+            if nid in dead_ends:     return "#F85149"
+            if nid in missing_fb:    return "#F0883E"
+            depth = levels.get(nid, 0)
+            if depth > 6:            return "#D29922"
+            return TYPE_COLOR.get(ntype_str, "#2A3650")
+        elif overlay == "dependencies":
+            if nid in dep_nodes:     return "#F0883E"
+            return "#2A3650"
+        else:  # structure
+            return TYPE_COLOR.get(ntype_str, "#2A3650")
+
+    def node_label_color(nid, ntype_str):
+        base = node_color(nid, ntype_str)
+        if overlay == "dependencies" and nid not in dep_nodes:
+            return "#3A4A61"
+        return base
+
+    # ── SVG ────────────────────────────────────────────────────────────────────
+    defs = (
+        '<defs>'        '<marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">'        '<path d="M0,0 L6,3 L0,6 Z" fill="#1A2840"/>'        '</marker>'        '</defs>'
+    )
+
+    # Edges
+    svg_edges = ""
+    for nid, n in nodes.items():
+        if nid not in positions:
+            continue
+        x1, y1 = positions[nid]
+        for nxt in (n.next_nodes or []):
+            if nxt in positions:
+                x2, y2 = positions[nxt]
+                is_dep = (nxt in dep_nodes or nid in dep_nodes) and overlay == "dependencies"
+                stroke = "#F0883E40" if is_dep else "#111A28"
+                svg_edges += (
+                    f'<line x1="{x1:.1f}" y1="{y1+NODE_H/2:.1f}" '                    f'x2="{x2:.1f}" y2="{y2-NODE_H/2:.1f}" '                    f'stroke="{stroke}" stroke-width="1" '                    f'marker-end="url(#arr)"/>'                )
+
+    # Nodes
+    svg_nodes = ""
+    for nid, n in nodes.items():
+        if nid not in positions:
+            continue
+        cx, cy = positions[nid]
+        x = cx - NODE_W / 2
+        y = cy - NODE_H / 2
+        ntype_str = str(n.type).split(".")[-1].lower() if n.type else "unknown"
+        col = node_color(nid, ntype_str)
+        lcol = node_label_color(nid, ntype_str)
+        
+        # Label — truncar
+        label = (n.name or nid)[:14]
+        type_label = ntype_str.upper()[:8]
+
+        # Box
+        is_entry = (nid == entry)
+        stroke_w = "1.5" if is_entry else "1"
+        svg_nodes += (
+            f'<rect x="{x:.1f}" y="{y:.1f}" width="{NODE_W}" height="{NODE_H}" '            f'rx="5" fill="#0A0C12" stroke="{col}" stroke-width="{stroke_w}" opacity="0.9"/>'        )
+        # Type badge
+        svg_nodes += (
+            f'<rect x="{x:.1f}" y="{y:.1f}" width="28" height="{NODE_H}" '            f'rx="5" fill="{col}" opacity="0.15"/>'            f'<text x="{x+14:.1f}" y="{cy+1:.1f}" text-anchor="middle" '            f'fill="{col}" font-family="DM Mono,monospace" font-size="6" '            f'font-weight="600" letter-spacing="0.03em">{type_label[:4]}</text>'
+        )
+        # Node name
+        svg_nodes += (
+            f'<text x="{x+34:.1f}" y="{cy+4:.1f}" '            f'fill="#6B7E97" font-family="DM Mono,monospace" font-size="7.5" '            f'letter-spacing="0.02em">{label}</text>'
+        )
+
+    # Legend
+    if overlay == "complexity":
+        legend = (
+            '<text x="10" y="' + str(int(H)-8) + '" font-family="DM Mono,monospace" font-size="7" fill="#2A3650">'            '■ Dead end  ■ Missing fallback  ■ Deep node</text>'
+        )
+    elif overlay == "dependencies":
+        legend = (
+            '<text x="10" y="' + str(int(H)-8) + '" font-family="DM Mono,monospace" font-size="7" fill="#2A3650">'            '■ Has external dependency (API · Auth · Data dip)</text>'
+        )
+    else:
+        legend = ""
+
+    svg = (
+        f'<svg viewBox="0 0 {W:.0f} {H:.0f}" xmlns="http://www.w3.org/2000/svg" '        f'style="width:100%;max-height:520px;display:block;">'        f'<rect width="{W:.0f}" height="{H:.0f}" fill="#07080B"/>'        + defs + svg_edges + svg_nodes + legend +
+        '</svg>'
+    )
+
+    return svg
 
 
 # ── HEADER ─────────────────────────────────────────────────────────────────────
