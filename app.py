@@ -516,6 +516,12 @@ def empty_state_panel() -> str:
     )
 
 
+# ── COLOR CONSTANTS ──────────────────────────────────────────────────────────
+BG="07080B"; SURFACE="0E1118"; CARD="161B22"; BORDER="1C2030"
+TEXT="E8EDF5"; DIM="4B5568"; WHITE="FFFFFF"
+TEAL="00D4AA"; RED="F85149"; YELLOW="D29922"; ORANGE="F0883E"
+BLUE="00A8FF"; PURPLE="A78BFA"; GREEN="3FB950"
+
 def score_color(s): return TEAL if s>=70 else YELLOW if s>=40 else RED
 def mig_color(l): return {"SIMPLE":TEAL,"MODERADO":YELLOW,"COMPLEJO":ORANGE,"MUY COMPLEJO":RED}.get(l,"4B5568")
 def safe_name(s): return re.sub(r'[\\/*?:\[\]]','_',s)[:31]
