@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import json
 import re
@@ -28,12 +30,6 @@ Criterios de scoring:
 class IVRAnalyzer:
     def __init__(self):
         api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            try:
-                import streamlit as st
-                api_key = st.secrets.get("ANTHROPIC_API_KEY")
-            except Exception:
-                pass
         self.llm = AnthropicAdapter(api_key=api_key)
         self.config = LLMConfig(
             model="claude-sonnet-4-6",
