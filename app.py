@@ -2558,14 +2558,14 @@ if modo == 'Individual Flow':
         _s = st.session_state.analysis.get('score', 0)
         _sc = '#00D4AA' if _s >= 70 else '#D29922' if _s >= 40 else '#F85149'
         st.markdown(
-            f'<div class="o-results-nav">'
-            f'<span class="o-nav-score" style="color:{_sc};">■ {_s}/100</span>'
-            f'<span class="o-nav-sep">|</span>'
-            f'<a class="o-nav-item" href="#o-arch">Architecture</a>'
-            f'<a class="o-nav-item" href="#o-inv">Inventory</a>'
-            f'<a class="o-nav-item" href="#o-mig">Migration</a>'
+            f'<div style="position:sticky;top:0;z-index:100;background:#06080Cee;backdrop-filter:blur(12px);border-bottom:1px solid #0C1118;padding:0.55rem 0;margin:0 -3.5rem 2rem;padding-left:3.5rem;padding-right:3.5rem;display:flex;align-items:center;gap:0.5rem;">'
+            f'<span style="font-family:Syne,sans-serif;font-size:0.72rem;font-weight:700;color:{_sc};padding:0.25rem 0.6rem;border-radius:4px;background:#0A0D14;border:1px solid #0F1825;margin-right:0.3rem;">{_s}/100</span>'
+            f'<span style="color:#0C1118;margin:0 0.15rem;">|</span>'
+            f'<a href="#o-arch" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;">Architecture</a>'
+            f'<a href="#o-inv" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;">Inventory</a>'
+            f'<a href="#o-mig" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;">Migration</a>'
             f'<span style="flex:1;"></span>'
-            f'<a class="o-nav-item" href="#o-export" style="color:#1A3040;">↓ Export</a>'
+            f'<a href="#o-export" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#00D4AA;letter-spacing:0.08em;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #00D4AA20;background:#00D4AA08;text-decoration:none;">↓ Export</a>'
             f'</div>',
             unsafe_allow_html=True)
         st.markdown('<div id="o-export"></div>', unsafe_allow_html=True)
@@ -2669,12 +2669,12 @@ else:
 
         # Sticky nav portfolio
         st.markdown(
-            '<div class="o-results-nav">'
-            '<a class="o-nav-item active" href="#o-psummary">Summary</a>'
-            '<a class="o-nav-item" href="#o-pmap">Intelligence Map</a>'
-            '<a class="o-nav-item" href="#o-plist">Flow List</a>'
+            '<div style="position:sticky;top:0;z-index:100;background:#06080Cee;backdrop-filter:blur(12px);border-bottom:1px solid #0C1118;padding:0.55rem 0;margin:0 -3.5rem 2rem;padding-left:3m;padding-right:3.5rem;display:flex;align-items:center;gap:0.5rem;">'
+            '<a href="#o-psummary" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;color:#00D4AA;border-color:#00D4AA20;background:#00D4AA08;">Summary</a>'
+            '<a href="#o-pmap" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;">Intelligence Map</a>'
+            '<a href="#o-plist" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;">Flow List</a>'
             '<span style="flex:1;"></span>'
-            '<a class="o-nav-item" href="#o-pexport" style="color:#1A3040;">↓ Export</a>'
+            '<a href="#o-pexport" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#00D4AA;letter-spacing:0.08em;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #00D4AA20;background:#00D4AA08;text-decoration:none;">↓ Export</a>'
             '</div>',
             unsafe_allow_html=True)
         st.markdown('<div id="o-psummary" class="o-anchor"></div>', unsafe_allow_html=True)
