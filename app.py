@@ -947,109 +947,158 @@ def generar_portfolio_excel_v2(results, raw_yamls=None):
 
 
 
+
 def ivr_loading_panel(current: int, total: int, current_name: str = "", phases: list = None) -> str:
     """
-    Graph-expansion loading animation — Linear/Vercel level.
-    Nodes appear progressively as analysis advances.
+    Apple-level IVR graph loading animation.
+    SVG with internal animations — nodes pulse, edges draw, graph expands.
     """
     pct = int((current / max(total, 1)) * 100) if total > 1 else min(current * 22, 95)
 
-    # Graph nodes — expand progressively
+    # Full node architecture — progressive reveal based on pct
     ALL_NODES = [
-        # id, cx%, cy%, type, label
-        ("n0",  50, 18,  "entry",    "ENTRY"),
-        ("n1",  25, 38,  "auth",     "AUTH"),
-        ("n2",  75, 38,  "menu",     "MENU"),
-        ("n3",  12, 60,  "api",      "API"),
-        ("n4",  38, 60,  "task",     "TASK"),
-        ("n5",  62, 60,  "cond",     "COND"),
-        ("n6",  88, 60,  "xfer",     "XFER"),
-        ("n7",  25, 80,  "exit",     "EXIT"),
-        ("n8",  62, 80,  "exit",     "EXIT"),
-        ("n9",  50, 93,  "tts",      "TTS"),
+        # id, cx, cy, type, label, r
+        ("n0",  170,  22, "entry", "ENTRY",    8),
+        ("n1",   80,  55, "auth",  "AUTH",     7),
+        ("n2",  260,  55, "menu",  "MENU",     7),
+        ("n3",   30,  95, "api",   "API",      6),
+        ("n4",  110,  95, "task",  "TASK",     6),
+        ("n5",  210,  95, "cond",  "COND",     6),
+        ("n6",  300,  95, "xfer",  "XFER",     6),
+        ("n7",   65, 135, "exit",  "EXIT",     5),
+        ("n8",  170, 135, "exit",  "EXIT",     5),
+        ("n9",  285, 135, "exit",  "EXIT",     5),
+        ("n10", 170, 162, "tts",   "TTS",      5),
     ]
     ALL_EDGES = [
         ("n0","n1"), ("n0","n2"),
         ("n1","n3"), ("n1","n4"),
         ("n2","n5"), ("n2","n6"),
         ("n3","n7"), ("n4","n7"),
-        ("n5","n8"), ("n6","n8"),
-        ("n7","n9"), ("n8","n9"),
+        ("n5","n8"), ("n6","n9"),
+        ("n7","n10"),("n8","n10"),("n9","n10"),
     ]
     TYPE_COLOR = {
-        "entry": "#00D4AA", "auth": "#F85149", "menu": "#0090FF",
-        "api":   "#F0883E", "task": "#9B72F5", "cond": "#D29922",
-        "xfer":  "#00D4AA", "exit": "#2A3650", "tts":  "#3FB950",
+        "entry": "#00D4AA",
+        "auth":  "#F85149",
+        "menu":  "#0090FF",
+        "api":   "#F0883E",
+        "task":  "#9B72F5",
+        "cond":  "#D29922",
+        "xfer":  "#00D4AA",
+        "exit":  "#3A4A61",
+        "tts":   "#3FB950",
     }
 
-    W, H = 340, 105
     lit = max(2, int(len(ALL_NODES) * max(pct, 15) / 100))
+    cur = lit - 1
 
-    # SVG edges
+    # Build SVG
+    W, H = 340, 185
+
+    # Defs — glow filters per color
+    defs = '<defs>'
+    for ntype, col in TYPE_COLOR.items():
+        col_hex = col.replace('#','')
+        defs += (
+            f'<filter id="glow-{ntype}" x="-50%" y="-50%" width="200%" height="200%">'            f'<feGaussianBlur stdDeviation="3" result="blur"/>'            f'<feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>'            f'</filter>'
+        )
+    defs += '</defs>'
+
+    # Edges
     svg_edges = ""
     for (a, b) in ALL_EDGES:
         n1 = next(n for n in ALL_NODES if n[0]==a)
         n2 = next(n for n in ALL_NODES if n[0]==b)
-        x1, y1 = int(n1[1]*W/100), int(n1[2]*H/100)
-        x2, y2 = int(n2[1]*W/100), int(n2[2]*H/100)
+        x1, y1 = n1[1], n1[2]
+        x2, y2 = n2[1], n2[2]
         i1 = next(i for i,n in enumerate(ALL_NODES) if n[0]==a)
         i2 = next(i for i,n in enumerate(ALL_NODES) if n[0]==b)
         active = i1 < lit and i2 < lit
         col = TYPE_COLOR.get(n2[3], "#2A3650")
-        stroke = col if active else "#0D1320"
-        opacity = "0.5" if active else "1"
-        svg_edges += (
-            '<line x1="%d" y1="%d" x2="%d" y2="%d" '            'stroke="%s" stroke-width="1" opacity="%s"/>'        ) % (x1, y1, x2, y2, stroke, opacity)
 
-    # SVG nodes
+        if active:
+            # Animated dash-draw effect on active edges
+            length = ((x2-x1)**2 + (y2-y1)**2)**0.5
+            svg_edges += (
+                f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" '                f'stroke="{col}" stroke-width="1" opacity="0.6" '                f'stroke-dasharray="{length:.0f}" stroke-dashoffset="0">'                f'</line>'
+            )
+        else:
+            svg_edges += (
+                f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" '                f'stroke="#0D1320" stroke-width="0.75" opacity="1"/>'            )
+
+    # Nodes
     svg_nodes = ""
-    for i, (nid, nx, ny, ntype, nlabel) in enumerate(ALL_NODES):
-        cx, cy = int(nx*W/100), int(ny*H/100)
+    for i, (nid, cx, cy, ntype, label, r) in enumerate(ALL_NODES):
         col = TYPE_COLOR.get(ntype, "#2A3650")
         is_lit = i < lit
-        is_cur = i == lit - 1
-        r = 5 if ntype in ("entry",) else 4
-        op = "1" if is_lit else "0.08"
+        is_cur = i == cur
 
-        if is_cur:
-            # Pulse ring
+        if not is_lit:
+            # Unvisited — ghost
             svg_nodes += (
-                '<circle cx="%d" cy="%d" r="%d" fill="none" stroke="%s" stroke-width="1" opacity="0.25">'                '<animate attributeName="r" values="%d;%d;%d" dur="1.2s" repeatCount="indefinite"/>'                '<animate attributeName="opacity" values="0.25;0;0.25" dur="1.2s" repeatCount="indefinite"/>'                '</circle>'            ) % (cx, cy, r+5, col, r+5, r+9, r+5)
-            svg_nodes += '<circle cx="%d" cy="%d" r="%d" fill="%s"/>' % (cx, cy, r, col)
+                f'<circle cx="{cx}" cy="{cy}" r="{r}" '                f'fill="#0C0F16" stroke="#0D1320" stroke-width="0.75"/>'                f'<text x="{cx}" y="{cy+r+9}" text-anchor="middle" '                f'fill="#161D2B" font-family="DM Mono,monospace" '                f'font-size="5" letter-spacing="0.05em">{label}</text>'
+            )
+        elif is_cur:
+            # Current — full glow + pulse animation
+            svg_nodes += (
+                # Outer pulse ring
+                f'<circle cx="{cx}" cy="{cy}" r="{r+6}" '                f'fill="none" stroke="{col}" stroke-width="1" opacity="0.15">'                f'<animate attributeName="r" values="{r+6};{r+14};{r+6}" '                f'dur="1.4s" repeatCount="indefinite"/>'                f'<animate attributeName="opacity" values="0.15;0;0.15" '                f'dur="1.4s" repeatCount="indefinite"/>'                f'</circle>'                # Middle ring
+                f'<circle cx="{cx}" cy="{cy}" r="{r+2}" '                f'fill="none" stroke="{col}" stroke-width="0.75" opacity="0.3">'                f'<animate attributeName="r" values="{r+2};{r+6};{r+2}" '                f'dur="1.4s" repeatCount="indefinite"/>'                f'<animate attributeName="opacity" values="0.3;0;0.3" '                f'dur="1.4s" repeatCount="indefinite"/>'                f'</circle>'                # Core node with glow filter
+                f'<circle cx="{cx}" cy="{cy}" r="{r}" '                f'fill="{col}" filter="url(#glow-{ntype})"/>'                # Inner highlight
+                f'<circle cx="{cx-1}" cy="{cy-1}" r="{max(1,r-3)}" '                f'fill="white" opacity="0.15"/>'                f'<text x="{cx}" y="{cy+r+9}" text-anchor="middle" '                f'fill="{col}" font-family="DM Mono,monospace" '                f'font-size="5.5" font-weight="600" '                f'letter-spacing="0.05em" opacity="1">{label}</text>'
+            )
         else:
-            svg_nodes += '<circle cx="%d" cy="%d" r="%d" fill="%s" opacity="%s"/>' % (cx, cy, r, col, op)
+            # Visited — solid, subtle
+            svg_nodes += (
+                f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{col}" opacity="0.85"/>'                f'<circle cx="{cx-1}" cy="{cy-1}" r="{max(1,r-3)}" '                f'fill="white" opacity="0.1"/>'                f'<text x="{cx}" y="{cy+r+9}" text-anchor="middle" '                f'fill="{col}" font-family="DM Mono,monospace" '                f'font-size="5" letter-spacing="0.05em" opacity="0.7">{label}</text>'
+            )
 
-        svg_nodes += (
-            '<text x="%d" y="%d" text-anchor="middle" fill="%s" opacity="%s" '            'font-family="DM Mono,monospace" font-size="5.5" letter-spacing="0.03em">%s</text>'        ) % (cx, cy+r+8, col, op, nlabel)
-
-    fname_short = current_name.replace(".yaml","").replace(".yml","")[:36]
+    # Scanning line animation (horizontal sweep)
+    scan_line = (
+        '<line x1="0" y1="0" x2="340" y2="0" '        'stroke="#00D4AA" stroke-width="0.5" opacity="0.08">'        '<animateTransform attributeName="transform" type="translate" '        'values="0,0;0,185;0,0" dur="3s" repeatCount="indefinite"/>'        '</line>'
+    )
 
     # Phases panel
     phases_html = ""
     if phases:
         for idx, ph in enumerate(phases):
             if idx < current:
-                cls = "ph-done"
-                dot = '<span style="color:#2A3650;font-size:0.6rem;">✓</span>'
+                dot = '<span style="color:#2A3650;font-size:0.55rem;margin-right:0.5rem;">✓</span>'
+                style = "color:#2A3650;"
             elif idx == current:
-                cls = "ph-active"
-                dot = '<span style="color:#00D4AA;font-size:0.55rem;">▶</span>'
+                dot = '<span style="color:#00D4AA;font-size:0.5rem;margin-right:0.5rem;">▶</span>'
+                style = "color:#CDD5E0;font-weight:500;"
             else:
-                cls = "ph-pend"
-                dot = '<span style="color:#111820;font-size:0.6rem;">·</span>'
-            phases_html += f'<div class="{cls}">{dot}{ph}</div>'
+                dot = '<span style="color:#0D1320;margin-right:0.5rem;">·</span>'
+                style = "color:#111820;"
+            phases_html += (
+                f'<div style="font-family:DM Mono,monospace;font-size:0.65rem;'                f'{style}padding:4px 0;border-bottom:1px solid #0A0D14;'                f'display:flex;align-items:center;">{dot}{ph}</div>'
+            )
 
-    counter = (
-        '<span style="font-family:Syne,sans-serif;font-size:1rem;font-weight:700;color:#00D4AA;">' +
-        f"{current}/{total}" +
-        '</span>'
-    ) if total > 1 else '<span style="font-family:DM Mono,monospace;font-size:0.6rem;color:#2A3650;">ANALYZING</span>'
+    counter_html = (
+        f'<span style="font-family:Syne,sans-serif;font-size:1rem;'        f'font-weight:800;color:#00D4AA;letter-spacing:-0.02em;">{current}/{total}</span>'
+    ) if total > 1 else (
+        '<span style="font-family:DM Mono,monospace;font-size:0.58rem;'        'color:#2A3650;letter-spacing:0.12em;text-transform:uppercase;">analyzing</span>'
+    )
+
+    fname_short = current_name.replace(".yaml","").replace(".yml","")[:38]
+    pct_str = str(pct)
 
     return (
-        '<div style="background:#0C0F16;border:1px solid #111620;border-radius:10px;'        'padding:1.1rem 1.25rem;">'        '<div style="display:flex;justify-content:space-between;align-items:center;'        'margin-bottom:0.5rem;">'        '<span style="font-family:DM Mono,monospace;font-size:0.58rem;color:#2A3650;'        'letter-spacing:0.12em;text-transform:uppercase;">Processing</span>'        + counter +
-        '</div>'        '<svg viewBox="0 0 340 115" xmlns="http://www.w3.org/2000/svg" '        'style="width:100%;height:85px;display:block;">'        + svg_edges + svg_nodes +
-        '</svg>'        + ('<div style="margin:0.5rem 0;">' + phases_html + '</div>' if phases_html else "")
-        + '<div style="margin-top:0.6rem;">'        '<div style="display:flex;justify-content:space-between;'        'font-family:DM Mono,monospace;font-size:0.6rem;margin-bottom:3px;">'        '<span style="color:#3A4A61;overflow:hidden;text-overflow:ellipsis;'        'white-space:nowrap;max-width:78%;">' + fname_short + '</span>'        '<span style="color:#00D4AA;">' + str(pct) + '%</span>'        '</div>'        '<div style="background:#080A0F;border-radius:1px;height:2px;overflow:hidden;">'        '<div style="background:linear-gradient(90deg,#00D4AA,#0090FF);'        'height:100%;width:' + str(pct) + '%;border-radius:1px;'        'transition:width 0.35s ease;"></div>'        '</div></div></div>'
+        '<div style="background:#0A0C12;border:1px solid #0F1520;'        'border-radius:12px;padding:1.1rem 1.25rem;overflow:hidden;">'
+        # Header row
+        '<div style="display:flex;justify-content:space-between;'        'align-items:center;margin-bottom:0.75rem;">'        '<span style="font-family:DM Mono,monospace;font-size:0.56rem;'        'color:#1E2840;letter-spacing:0.14em;text-transform:uppercase;">Flow Analysis</span>'        + counter_html +
+        '</div>'
+        # SVG Graph
+        + f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '          f'style="width:100%;height:{H//2+10}px;display:block;margin-bottom:0.6rem;">'          + defs + scan_line + svg_edges + svg_nodes +
+          '</svg>'
+
+        # Phases
+        + ('<div style="margin-bottom:0.6rem;">' + phases_html + '</div>' if phases_html else "")
+
+        # Progress bar
+        + '<div style="display:flex;justify-content:space-between;'        'align-items:center;font-family:DM Mono,monospace;font-size:0.58rem;'        'color:#2A3650;margin-bottom:4px;">'        '<span style="color:#3A4A61;overflow:hidden;text-overflow:ellipsis;'        'white-space:nowrap;max-width:80%;">' + fname_short + '</span>'        '<span style="color:#00D4AA;font-weight:500;">' + pct_str + '%</span>'        '</div>'        '<div style="background:#080A0F;border-radius:1px;height:1.5px;overflow:hidden;">'        '<div style="background:linear-gradient(90deg,#00D4AA 0%,#0090FF 60%,#9B72F5 100%);'        'height:100%;width:' + pct_str + '%;border-radius:1px;'        'transition:width 0.4s cubic-bezier(0.4,0,0.2,1);"></div>'        '</div>'        '</div>'
     )
 
 
