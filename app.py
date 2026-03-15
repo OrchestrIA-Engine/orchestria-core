@@ -1889,6 +1889,115 @@ def render_export_buttons(analysis, flow, results=None, flows_map=None, raw_yaml
                     key='dl_pdf_batch', use_container_width=True)
 
 
+
+def score_color_hex(s):
+    return '#00D4AA' if s >= 70 else '#D29922' if s >= 40 else '#F85149'
+
+
+def mostrar_resultado(analysis, flow=None, key_prefix='main'):
+    """Renderiza el resultado del análisis — Linear/Vercel design system."""
+    score  = analysis.get('score', 0)
+    inv    = analysis.get('inventory', {})
+    issues = analysis.get('critical_issues', [])
+    imps   = analysis.get('improvements', [])
+    summ   = analysis.get('summary', '')
+
+    sc = score_color_hex(score)
+
+    # ── SCORE + RESUMEN ────────────────────────────────────────────────────────
+    col_s, col_r = st.columns([1, 2])
+    with col_s:
+        st.markdown(score_ring(score), unsafe_allow_html=True)
+
+    with col_r:
+        if summ:
+            st.markdown(
+                f'<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.88rem;'                f'color:#6B7E97;line-height:1.75;padding:0.25rem 0 1rem;">{summ}</div>',
+                unsafe_allow_html=True)
+        for i in issues:
+            st.error(i)
+        for i in imps:
+            st.success(i)
+
+    # ── FLOW INVENTORY ────────────────────────────────────────────────────────
+    if inv:
+        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+        st.markdown('<span class="o-label">Flow Inventory</span>', unsafe_allow_html=True)
+        c1,c2,c3,c4,c5,c6 = st.columns(6)
+        c1.metric('Nodes',     inv.get('total_nodes',0))
+        c2.metric('Menus',     inv.get('menu_nodes',0))
+        c3.metric('Transfers', inv.get('transfer_nodes',0))
+        c4.metric('Logic',     inv.get('task_nodes',0))
+        c5.metric('Self-Svc',  str(inv.get('self_service_ratio',0))+'%')
+        c6.metric('Ext. Deps', inv.get('total_external_deps',0))
+
+    # ── EXTERNAL DEPENDENCIES ─────────────────────────────────────────────────
+    if inv and any([inv.get('data_services'), inv.get('auth_services'),
+                    inv.get('dynamic_variables'), inv.get('unique_queues')]):
+        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+        st.markdown('<span class="o-label">External Dependencies</span>', unsafe_allow_html=True)
+        chips = ''
+        for s in inv.get('data_services',   []): chips += f'<span class="orch-chip chip-teal">⬡ {s}</span>'
+        for s in inv.get('auth_services',   []): chips += f'<span class="orch-chip chip-blue">⬡ {s}</span>'
+        for v in inv.get('dynamic_variables',[]): chips += '<span class="orch-chip">'+'{'+v+'}</span>'
+        for q in inv.get('unique_queues',   []): chips += f'<span class="orch-chip">⇒ {q}</span>'
+        st.markdown(
+            '<div style="display:flex;flex-wrap:wrap;gap:0.2rem;">'+chips+'</div>',
+            unsafe_allow_html=True)
+
+    # ── MIGRATION TO CLOUD ────────────────────────────────────────────────────
+    if inv:
+        ml        = inv.get('migration_level', 'SIMPLE')
+        ms        = inv.get('migration_complexity_score', 0)
+        breakdown = inv.get('migration_score_breakdown', {})
+        flags     = inv.get('migration_risk_flags', [])
+
+        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="display:flex;align-items:center;gap:0.9rem;margin-bottom:0.75rem;">'            f'<span class="o-label" style="margin:0;">Migration to Cloud</span>'            f'{migration_badge(ml)}'            f'<span style="font-family:DM Mono,monospace;font-size:0.65rem;color:#2A3650;">{ms}/100</span>'            f'</div>', unsafe_allow_html=True)
+
+        # Benchmark banca
+        st.markdown(benchmark_card(inv, 'banking'), unsafe_allow_html=True)
+
+        # 5D breakdown bars
+        if breakdown:
+            dim_colors = {
+                'D1_grafo':        '#0090FF',
+                'D2_dependencias': '#00D4AA',
+                'D3_riesgo':       '#F85149',
+                'D4_escala':       '#D29922',
+                'D5_testing':      '#9B72F5',
+            }
+            bars = '<div style="display:flex;flex-direction:column;gap:8px;margin:1rem 0;">'
+            for key, dim in breakdown.items():
+                label  = dim.get('label', key)
+                dscore = dim.get('score', 0)
+                dmax   = dim.get('max', 25)
+                pct    = round(dscore / dmax * 100) if dmax else 0
+                color  = dim_colors.get(key, '#2A3650')
+                bars += (
+                    f'<div style="display:flex;align-items:center;gap:10px;">'                    f'<div style="font-family:DM Mono,monospace;font-size:0.6rem;'                    f'color:#2A3650;width:155px;flex-shrink:0;">{label}</div>'                    f'<div style="flex:1;background:#080A0F;border-radius:2px;height:3px;">'                    f'<div style="width:{pct}%;background:{color};height:100%;'                    f'border-radius:2px;"></div></div>'                    f'<div style="font-family:DM Mono,monospace;font-size:0.6rem;'                    f'color:#2A3650;width:38px;text-align:right;">{dscore}/{dmax}</div>'                    f'</div>'
+                )
+            bars += '</div>'
+            st.markdown(bars, unsafe_allow_html=True)
+
+        # Score explanation
+        explanation = score_explanation(analysis)
+        if explanation:
+            st.markdown(explanation, unsafe_allow_html=True)
+
+        # Migration hours
+        st.markdown(migration_hours_card(inv), unsafe_allow_html=True)
+
+        # Risk flags
+        if flags:
+            for f_ in flags:
+                st.warning(f_)
+        else:
+            st.success('No migration risks detected')
+
+
+
 # ── HEADER ─────────────────────────────────────────────────────────────────────
 st.markdown(
     '<div class="o-header">'
