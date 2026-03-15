@@ -14,125 +14,399 @@ st.set_page_config(page_title='OrchestrIA', layout='wide', page_icon='🎙️',
 st.html("""
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
+/* ── RESET & BASE ─────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 html, body, [data-testid="stApp"] {
-    background: #07080B !important; color: #E8EDF5 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important; }
-[data-testid="stAppViewContainer"] > .main { background: #07080B !important; }
-.block-container { padding: 2rem 2.5rem 4rem !important; max-width: 1320px !important; }
+    background: #080A0F !important;
+    color: #CDD5E0 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+[data-testid="stAppViewContainer"] > .main { background: #080A0F !important; }
+.block-container {
+    padding: 2.5rem 3rem 6rem !important;
+    max-width: 1400px !important;
+}
 #MainMenu, footer, header, [data-testid="stToolbar"],
 [data-testid="stDecoration"], [data-testid="stStatusWidget"] { display: none !important; }
 h1,h2,h3 { font-family: 'Syne', sans-serif !important; }
-hr { border-color: #1C2030 !important; margin: 1.75rem 0 !important; }
+hr { border: none !important; border-top: 1px solid #111620 !important; margin: 2rem 0 !important; }
 
-/* HEADER */
-.orch-header { display:flex; align-items:center; justify-content:space-between;
-    padding:0 0 1.75rem; border-bottom:1px solid #1C2030; margin-bottom:2rem; }
-.orch-logo-main { font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800;
-    color:#F0F6FC; letter-spacing:-0.03em; }
-.orch-logo-dot { color:#00D4AA; font-size:1.5rem; font-weight:800; }
-.orch-logo-badge { font-family:'DM Mono',monospace; font-size:0.68rem; color:#3D4D66;
-    background:#0E1118; border:1px solid #1C2030; border-radius:4px;
-    padding:2px 8px; margin-left:0.6rem; letter-spacing:0.1em; text-transform:uppercase; }
-.orch-tagline { font-family:'DM Mono',monospace; font-size:0.68rem; color:#3D4D66;
-    letter-spacing:0.1em; text-transform:uppercase; }
+/* ── HEADER ──────────────────────────────────────────────────────────────── */
+.o-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 2rem;
+    margin-bottom: 2.5rem;
+    border-bottom: 1px solid #111620;
+}
+.o-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+.o-logo-wordmark {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #EEF2F8;
+    letter-spacing: -0.04em;
+    line-height: 1;
+}
+.o-logo-wordmark em { color: #00D4AA; font-style: normal; }
+.o-logo-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: #2E3A4E;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border: 1px solid #1A2233;
+    border-radius: 3px;
+    background: #0C0F16;
+}
+.o-header-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    color: #2A3650;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
 
-/* RADIO TABS */
-.stRadio > div { flex-direction:row !important; gap:0 !important;
-    background:#0E1118 !important; border:1px solid #1C2030 !important;
-    border-radius:8px !important; padding:3px !important;
-    display:inline-flex !important; width:auto !important; }
-.stRadio > div > label { background:transparent !important; border:none !important;
-    border-radius:5px !important; padding:7px 18px !important;
-    font-family:'Plus Jakarta Sans',sans-serif !important; font-size:0.82rem !important;
-    font-weight:500 !important; color:#4B5568 !important;
-    cursor:pointer !important; transition:all 0.15s !important; white-space:nowrap !important; }
-.stRadio > div > label:has(input:checked) { background:#1C2030 !important; color:#E8EDF5 !important; }
-.stRadio > div > label > div:first-child { display:none !important; }
+/* ── MODE SELECTOR ───────────────────────────────────────────────────────── */
+.stRadio > div {
+    flex-direction: row !important;
+    gap: 0 !important;
+    background: #0C0F16 !important;
+    border: 1px solid #161D2B !important;
+    border-radius: 7px !important;
+    padding: 3px !important;
+    display: inline-flex !important;
+    width: auto !important;
+}
+.stRadio > div > label {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 5px !important;
+    padding: 6px 20px !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    color: #3A4A61 !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
+    white-space: nowrap !important;
+    letter-spacing: 0.01em !important;
+}
+.stRadio > div > label:has(input:checked) {
+    background: #161D2B !important;
+    color: #CDD5E0 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+}
+.stRadio > div > label > div:first-child { display: none !important; }
 
-/* UPLOAD */
-[data-testid="stFileUploader"] { background:#0B0D14 !important;
-    border:1px dashed #1C2030 !important; border-radius:10px !important; padding:0.25rem !important; }
-[data-testid="stFileUploaderDropzone"] { background:transparent !important;
-    border:none !important; padding:1.5rem !important; }
+/* ── FILE UPLOADER ───────────────────────────────────────────────────────── */
+[data-testid="stFileUploader"] {
+    background: transparent !important;
+    border: 1px dashed #1A2233 !important;
+    border-radius: 10px !important;
+    padding: 0 !important;
+    transition: border-color 0.2s !important;
+}
+[data-testid="stFileUploader"]:hover {
+    border-color: #00D4AA30 !important;
+}
+[data-testid="stFileUploaderDropzone"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 2rem !important;
+}
 [data-testid="stFileUploaderDropzoneInstructions"] p {
-    font-family:'Plus Jakarta Sans',sans-serif !important; color:#4B5568 !important; font-size:0.82rem !important; }
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    color: #2E3A4E !important;
+    font-size: 0.8rem !important;
+}
+[data-testid="stFileUploaderDropzoneInstructions"] small {
+    color: #1E2840 !important;
+    font-size: 0.7rem !important;
+}
 
-/* TEXTAREA */
-.stTextArea textarea { background:#0B0D14 !important; border:1px solid #1C2030 !important;
-    border-radius:10px !important; color:#8B9EB8 !important;
-    font-family:'DM Mono',monospace !important; font-size:0.76rem !important; line-height:1.65 !important; }
-.stTextArea textarea:focus { border-color:#00D4AA40 !important; outline:none !important; }
+/* ── TEXTAREA (CODE EDITOR) ──────────────────────────────────────────────── */
+.stTextArea textarea {
+    background: #0C0F16 !important;
+    border: 1px solid #161D2B !important;
+    border-radius: 9px !important;
+    color: #7A90AB !important;
+    font-family: 'DM Mono', monospace !important;
+    font-size: 0.75rem !important;
+    line-height: 1.7 !important;
+    padding: 1.1rem 1.25rem !important;
+    transition: border-color 0.2s !important;
+}
+.stTextArea textarea:focus {
+    border-color: #00D4AA25 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 1px #00D4AA10 !important;
+}
+.stTextArea textarea::placeholder { color: #1E2840 !important; }
 
-/* BUTTONS */
-.stButton > button { background:#00D4AA !important; color:#07080B !important;
-    border:none !important; border-radius:8px !important;
-    font-family:'Plus Jakarta Sans',sans-serif !important; font-size:0.85rem !important;
-    font-weight:600 !important; padding:0.65rem 1.5rem !important; transition:all 0.15s !important; }
-.stButton > button:hover { background:#00BBAA !important; transform:translateY(-1px) !important;
-    box-shadow:0 4px 20px #00D4AA25 !important; }
-.stDownloadButton > button { background:#0E1118 !important; color:#00D4AA !important;
-    border:1px solid #00D4AA40 !important; border-radius:8px !important;
-    font-family:'Plus Jakarta Sans',sans-serif !important; font-size:0.82rem !important; }
-.stDownloadButton > button:hover { background:#00D4AA12 !important; }
+/* ── BUTTONS ─────────────────────────────────────────────────────────────── */
+.stButton > button {
+    background: #00D4AA !important;
+    color: #060810 !important;
+    border: none !important;
+    border-radius: 7px !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 0.83rem !important;
+    font-weight: 600 !important;
+    padding: 0.6rem 1.5rem !important;
+    letter-spacing: 0.01em !important;
+    transition: all 0.15s ease !important;
+}
+.stButton > button:hover {
+    background: #00BF9A !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 16px rgba(0,212,170,0.2) !important;
+}
+.stButton > button:focus {
+    box-shadow: 0 0 0 2px rgba(0,212,170,0.3) !important;
+}
+.stDownloadButton > button {
+    background: transparent !important;
+    color: #00D4AA !important;
+    border: 1px solid #00D4AA20 !important;
+    border-radius: 7px !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
+    padding: 0.5rem 1.2rem !important;
+    transition: all 0.15s !important;
+}
+.stDownloadButton > button:hover {
+    background: #00D4AA08 !important;
+    border-color: #00D4AA35 !important;
+}
 
-/* METRICS */
-div[data-testid="metric-container"] { background:#0B0D14 !important;
-    border:1px solid #1C2030 !important; border-radius:10px !important; padding:1rem 1.1rem !important; }
-div[data-testid="metric-container"] label { font-family:'DM Mono',monospace !important;
-    font-size:0.62rem !important; color:#3D4D66 !important;
-    text-transform:uppercase !important; letter-spacing:0.12em !important; }
+/* ── METRICS ─────────────────────────────────────────────────────────────── */
+div[data-testid="metric-container"] {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid #111620 !important;
+    border-radius: 0 !important;
+    padding: 0.75rem 0 !important;
+}
+div[data-testid="metric-container"] label {
+    font-family: 'DM Mono', monospace !important;
+    font-size: 0.58rem !important;
+    color: #2A3650 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.14em !important;
+}
 div[data-testid="metric-container"] [data-testid="stMetricValue"] {
-    font-family:'Syne',sans-serif !important; font-size:1.5rem !important;
-    font-weight:700 !important; color:#E8EDF5 !important; }
+    font-family: 'Syne', sans-serif !important;
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    color: #CDD5E0 !important;
+}
 
-/* PROGRESS */
-.stProgress > div > div { background:#0E1118 !important; border-radius:4px !important; }
-.stProgress > div > div > div { background:linear-gradient(90deg,#00D4AA,#00A8FF) !important; border-radius:4px !important; }
+/* ── PROGRESS ────────────────────────────────────────────────────────────── */
+.stProgress > div > div {
+    background: #0C0F16 !important;
+    border-radius: 2px !important;
+    height: 2px !important;
+}
+.stProgress > div > div > div {
+    background: linear-gradient(90deg, #00D4AA, #0090FF) !important;
+    border-radius: 2px !important;
+    transition: width 0.4s ease !important;
+}
 
-/* EXPANDER */
-.streamlit-expanderHeader { background:#0B0D14 !important; border:1px solid #1C2030 !important;
-    border-radius:8px !important; font-family:'Plus Jakarta Sans',sans-serif !important;
-    font-size:0.85rem !important; color:#8B9EB8 !important; padding:0.75rem 1rem !important; }
-.streamlit-expanderContent { background:#09090F !important; border:1px solid #1C2030 !important;
-    border-top:none !important; border-radius:0 0 8px 8px !important; padding:1.5rem !important; }
+/* ── EXPANDER ────────────────────────────────────────────────────────────── */
+.streamlit-expanderHeader {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid #111620 !important;
+    border-radius: 0 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 0.82rem !important;
+    color: #6B7E97 !important;
+    padding: 0.75rem 0 !important;
+    transition: color 0.15s !important;
+}
+.streamlit-expanderHeader:hover { color: #CDD5E0 !important; }
+.streamlit-expanderContent {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid #111620 !important;
+    border-radius: 0 !important;
+    padding: 1.25rem 0 !important;
+}
 
-/* CUSTOM CLASSES */
-.orch-badge { display:inline-flex; align-items:center; gap:6px; padding:3px 10px;
-    border-radius:20px; font-family:'DM Mono',monospace; font-size:0.7rem;
-    font-weight:500; letter-spacing:0.05em; }
-.badge-simple   { background:#00D4AA12; color:#00D4AA; border:1px solid #00D4AA25; }
-.badge-moderado { background:#D2992212; color:#D29922; border:1px solid #D2992225; }
-.badge-complejo { background:#F0883E12; color:#F0883E; border:1px solid #F0883E25; }
-.badge-muy      { background:#F8514912; color:#F85149; border:1px solid #F8514925; }
+/* ── ALERTS ──────────────────────────────────────────────────────────────── */
+.stAlert {
+    background: transparent !important;
+    border: none !important;
+    border-left: 2px solid !important;
+    border-radius: 0 !important;
+    padding: 0.6rem 0.9rem !important;
+}
+div[data-testid="stNotification"] {
+    background: transparent !important;
+}
 
-.orch-chip { display:inline-flex; align-items:center; background:#0E1118;
-    border:1px solid #1C2030; border-radius:5px; padding:2px 9px;
-    font-family:'DM Mono',monospace; font-size:0.7rem; color:#6B7A94; margin:2px; }
-.chip-teal { color:#00D4AA; border-color:#00D4AA20; background:#00D4AA06; }
-.chip-blue { color:#00A8FF; border-color:#00A8FF20; background:#00A8FF06; }
+/* ── CUSTOM TYPOGRAPHY ───────────────────────────────────────────────────── */
+.o-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    color: #2A3650;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    margin-bottom: 1rem;
+    display: block;
+}
+.o-section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4A5E78;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 1.25rem;
+    display: block;
+}
+.lbl {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    color: #2A3650;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    margin-bottom: 1rem;
+    display: block;
+}
 
-.lbl { font-family:'DM Mono',monospace; font-size:0.62rem; color:#3D4D66;
-    text-transform:uppercase; letter-spacing:0.15em; margin-bottom:0.85rem; display:block; }
+/* ── INLINE METADATA ─────────────────────────────────────────────────────── */
+.o-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: #2A3650;
+    letter-spacing: 0.04em;
+}
+.o-meta-sep { color: #1A2233; margin: 0 0.35rem; }
 
-.ph-done  { color:#00D4AA; font-family:'DM Mono',monospace; font-size:0.78rem; display:block; padding:7px 0; border-bottom:1px solid #13161E; }
-.ph-active{ color:#00A8FF; font-family:'DM Mono',monospace; font-size:0.78rem; display:block; padding:7px 0; border-bottom:1px solid #13161E; }
-.ph-pend  { color:#252D3D; font-family:'DM Mono',monospace; font-size:0.78rem; display:block; padding:7px 0; border-bottom:1px solid #13161E; }
+/* ── CHIPS (minimal) ─────────────────────────────────────────────────────── */
+.orch-chip {
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    border: 1px solid #161D2B;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    color: #2A3650;
+    margin: 2px;
+    letter-spacing: 0.04em;
+}
+.chip-teal { color: #00D4AA; border-color: #00D4AA18; }
+.chip-blue { color: #0090FF; border-color: #0090FF18; }
+.compat-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    background: transparent;
+    border: 1px solid #111620;
+    border-radius: 3px;
+    padding: 2px 7px;
+    color: #222D42;
+    letter-spacing: 0.04em;
+}
 
-/* FEATURE CARDS (empty state) */
-.feat-card { background:#0B0D14; border:1px solid #1C2030; border-radius:10px;
-    padding:1.25rem 1.5rem; margin-bottom:0.75rem; }
-.feat-icon { font-size:1.1rem; margin-bottom:0.5rem; display:block; }
-.feat-title { font-family:'Syne',sans-serif; font-size:0.88rem; font-weight:700;
-    color:#E8EDF5; margin-bottom:0.35rem; }
-.feat-desc { font-family:'Plus Jakarta Sans',sans-serif; font-size:0.8rem;
-    color:#4B5568; line-height:1.55; }
+/* ── BADGES (migration level) ────────────────────────────────────────────── */
+.orch-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.badge-simple   { background: #00D4AA0D; color: #00D4AA; border: 1px solid #00D4AA20; }
+.badge-moderado { background: #D299220D; color: #D29922; border: 1px solid #D2992220; }
+.badge-complejo { background: #F0883E0D; color: #F0883E; border: 1px solid #F0883E20; }
+.badge-muy      { background: #F851490D; color: #F85149; border: 1px solid #F8514920; }
 
-/* GENESYS COMPAT CHIPS */
-.compat-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:0.6rem; }
-.compat-chip { font-family:'DM Mono',monospace; font-size:0.65rem;
-    background:#0E1118; border:1px solid #1C2030; border-radius:4px;
-    padding:2px 8px; color:#3D4D66; }
+/* ── PHASE STEPS ─────────────────────────────────────────────────────────── */
+.ph-done {
+    color: #2A3650;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 5px 0;
+    border-bottom: 1px solid #0E1320;
+}
+.ph-active {
+    color: #CDD5E0;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 5px 0;
+    border-bottom: 1px solid #0E1320;
+}
+.ph-pend {
+    color: #161D2B;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 5px 0;
+    border-bottom: 1px solid #0E1320;
+}
+
+/* ── CAPABILITY DOMAINS ──────────────────────────────────────────────────── */
+.o-capability-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid #0E1320;
+}
+.o-capability-name {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.78rem;
+    color: #3A4A61;
+    font-weight: 500;
+}
+.o-capability-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #1A2840;
+    flex-shrink: 0;
+}
+
+/* ── RESULT DIVIDERS ─────────────────────────────────────────────────────── */
+.o-section-divider {
+    border: none;
+    border-top: 1px solid #0E1320;
+    margin: 1.75rem 0;
+}
+
+/* ── HELPER TEXT ─────────────────────────────────────────────────────────── */
+.o-helper {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.72rem;
+    color: #1E2840;
+    margin-top: 0.5rem;
+    letter-spacing: 0.01em;
+}
 </style>
 """)
 
@@ -221,195 +495,27 @@ def migration_badge(ml):
            'COMPLEJO':'badge-complejo','MUY COMPLEJO':'badge-muy'}.get(ml,'badge-simple')
     return f'<span class="orch-badge {cls}">● {ml}</span>'
 
-def empty_state_panel():
-    return """
-<div style="padding:0.25rem 0 0;">
-  <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#252D3D;
-       text-transform:uppercase;letter-spacing:0.15em;margin-bottom:1.25rem;">What you'll get</div>
-
-  <div class="feat-card">
-    <span class="feat-icon">◈</span>
-    <div class="feat-title">Quality Score + Rubric</div>
-    <div class="feat-desc">AI-powered audit across 6 dimensions — structural integrity, operational robustness, CX, API handling, architecture, and edge coverage.</div>
-  </div>
-
-  <div class="feat-card">
-    <span class="feat-icon">⬡</span>
-    <div class="feat-title">Full Flow Inventory</div>
-    <div class="feat-desc">Node counts, queue mapping, external API dependencies, dynamic TTS variables, auth services, self-service ratio.</div>
-  </div>
-
-  <div class="feat-card">
-    <span class="feat-icon">⇢</span>
-    <div class="feat-title">Migration Assessment</div>
-    <div class="feat-desc">Complexity scoring for Genesys Cloud migration. Risk flags, dependency matrix, estimated effort level.</div>
-  </div>
-
-  <div class="feat-card">
-    <span class="feat-icon">↓</span>
-    <div class="feat-title">Executive PDF Report</div>
-    <div class="feat-desc">CIO-ready PDF with findings, action plan, migration roadmap, and technical inventory. Ready to share in minutes.</div>
-  </div>
-
-  <div style="margin-top:1.25rem;">
-    <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:#252D3D;
-         text-transform:uppercase;letter-spacing:0.15em;margin-bottom:0.6rem;">Genesys compatibility</div>
-    <div class="compat-row">
-      <span class="compat-chip">Genesys Cloud CX</span>
-      <span class="compat-chip">Architect inboundCall</span>
-      <span class="compat-chip">YAML · JSON · XML</span>
-      <span class="compat-chip">dataQuery / apiCall</span>
-      <span class="compat-chip">authenticate</span>
-      <span class="compat-chip">TTS Variables</span>
-      <span class="compat-chip">Transfer Nodes</span>
-    </div>
-  </div>
-</div>"""
-
-def mostrar_loading(placeholder):
-    fases = ['Parsing flow structure','Extracting node inventory',
-             'Detecting external dependencies','AI analysis · Genesys Expert',
-             'Generating migration assessment']
-    hints = ['Scanning for dead ends...','Mapping transfer targets...',
-             'Evaluating timeout coverage...','Cross-referencing node graph...',
-             'Calculating migration complexity...']
-    def render(step, hi):
-        rows = ''.join(
-            f'<span class="ph-{"done" if i<step else "active" if i==step else "pend"}">'
-            f'{"✓" if i<step else "▸" if i==step else "·"} {label}</span>'
-            for i, label in enumerate(fases))
-        with placeholder.container():
-            st.markdown(
-                f'<div style="background:#0B0D14;border:1px solid #1C2030;border-radius:10px;'
-                f'padding:1.25rem 1.5rem;"><span class="lbl">Analyzing</span>'
-                f'{rows}'
-                f'<div style="margin-top:0.85rem;font-family:\'DM Mono\',monospace;'
-                f'font-size:0.65rem;color:#252D3D;">{hints[hi%len(hints)]}</div></div>',
-                unsafe_allow_html=True)
-            st.progress((step+1)/len(fases))
-    return render
-
-def mostrar_resultado(analysis, flow=None, key_prefix='main'):
-    score  = analysis.get('score', 0)
-    inv    = analysis.get('inventory', {})
-    issues = analysis.get('critical_issues', [])
-    imps   = analysis.get('improvements', [])
-    summ   = analysis.get('summary', '')
-
-    col_s, col_r = st.columns([1, 2])
-    with col_s:
-        st.markdown(score_ring(score), unsafe_allow_html=True)
-        # Export buttons rendered by render_export_buttons() above
-
-    with col_r:
-        st.markdown(
-            f'<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:0.9rem;'
-            f'color:#7A8BA5;line-height:1.75;padding:0.25rem 0 1rem;">{summ}</div>',
-            unsafe_allow_html=True)
-        for i in issues: st.error(i)
-        for i in imps:   st.success(i)
-
-    if inv:
-        st.divider()
-        st.markdown('<span class="lbl">Flow Inventory</span>', unsafe_allow_html=True)
-        c1,c2,c3,c4,c5,c6 = st.columns(6)
-        c1.metric('Nodes',    inv.get('total_nodes',0))
-        c2.metric('Menus',    inv.get('menu_nodes',0))
-        c3.metric('Transfers',inv.get('transfer_nodes',0))
-        c4.metric('Logic',    inv.get('task_nodes',0))
-        c5.metric('Self-Svc',str(inv.get('self_service_ratio',0))+'%')
-        c6.metric('Ext. Deps',inv.get('total_external_deps',0))
-
-    if inv and any([inv.get('data_services'),inv.get('auth_services'),
-                    inv.get('dynamic_variables'),inv.get('unique_queues')]):
-        st.divider()
-        st.markdown('<span class="lbl">External Dependencies</span>', unsafe_allow_html=True)
-        chips = ''
-        for s in inv.get('data_services',   []): chips += f'<span class="orch-chip chip-teal">⬡ {s}</span>'
-        for s in inv.get('auth_services',   []): chips += f'<span class="orch-chip chip-blue">⬡ {s}</span>'
-        for v in inv.get('dynamic_variables',[]): chips += f'<span class="orch-chip">'+'{'+v+'}</span>'
-        for q in inv.get('unique_queues',   []): chips += f'<span class="orch-chip">⇒ {q}</span>'
-        st.markdown('<div style="display:flex;flex-wrap:wrap;gap:0.2rem;">'+chips+'</div>',
-                    unsafe_allow_html=True)
-
-    if inv:
-        st.divider()
-        ml = inv.get('migration_level', 'SIMPLE')
-        ms = inv.get('migration_complexity_score', 0)
-        breakdown = inv.get('migration_score_breakdown', {})
-        flags = inv.get('migration_risk_flags', [])
-
-        # Header del card — benchmark fijo banca
-        st.markdown(
-            f'<div style="display:flex;align-items:center;gap:0.9rem;margin-bottom:0.5rem;">'            f'<span class="lbl" style="margin:0;">Migration to Cloud</span>'            f'{migration_badge(ml)}'            f'<span style="font-family:\'DM Mono\',monospace;font-size:0.7rem;color:#3D4D66;">{ms}/100</span>'            f'</div>', unsafe_allow_html=True)
-        st.markdown(benchmark_card(inv, 'banking'), unsafe_allow_html=True)
+def empty_state_panel() -> str:
+    """Capability domains panel — minimal, Linear-style."""
+    domains = [
+        ("Structural Integrity",   "Flow graph, dead ends, depth analysis"),
+        ("Flow Inventory",         "Node types, counts, entry mapping"),
+        ("Dependency Mapping",     "APIs, auth services, TTS variables"),
+        ("Migration Complexity",   "5-dimension scoring, effort estimate"),
+        ("API / TTS Detection",    "Data dips, auth patterns, dynamic vars"),
+        ("Edge Case Coverage",     "Missing fallbacks, timeout gaps, loops"),
+    ]
+    rows = ""
+    for name, desc in domains:
+        rows += (
+            f'<div class="o-capability-row">'            f'<div>'            f'<div class="o-capability-name">{name}</div>'            f'<div style="font-family:DM Mono,monospace;font-size:0.6rem;color:#1E2840;margin-top:1px;">{desc}</div>'            f'</div>'            f'<div class="o-capability-dot"></div>'            f'</div>'
+        )
+    return (
+        '<div style="padding-top:0.5rem;">'        '<div style="font-family:DM Mono,monospace;font-size:0.58rem;color:#2A3650;'        'letter-spacing:0.14em;text-transform:uppercase;margin-bottom:1.25rem;">'        'Analysis Domains</div>'        + rows +
+        '</div>'
+    )
 
 
-        # Breakdown de 5 dimensiones si existe
-        if breakdown:
-            dim_colors = {
-                'D1_grafo':        '#00A8FF',
-                'D2_dependencias': '#00D4AA',
-                'D3_riesgo':       '#F85149',
-                'D4_escala':       '#D29922',
-                'D5_testing':      '#A78BFA',
-            }
-            bars_html = '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem;">'
-            for key, dim in breakdown.items():
-                label  = dim.get('label', key)
-                dscore = dim.get('score', 0)
-                dmax   = dim.get('max', 25)
-                pct    = round(dscore / dmax * 100) if dmax else 0
-                color  = dim_colors.get(key, '#4B5568')
-                bars_html += (
-                    f'<div style="display:flex;align-items:center;gap:10px;">'
-                    f'<div style="font-family:\'DM Mono\',monospace;font-size:0.62rem;'
-                    f'color:#4B5568;width:160px;flex-shrink:0;">{label}</div>'
-                    f'<div style="flex:1;background:#0E1118;border-radius:3px;height:5px;overflow:hidden;">'
-                    f'<div style="width:{pct}%;background:{color};height:100%;border-radius:3px;'
-                    f'box-shadow:0 0 6px {color}50;"></div></div>'
-                    f'<div style="font-family:\'DM Mono\',monospace;font-size:0.62rem;'
-                    f'color:#3D4D66;width:40px;text-align:right;">{dscore}/{dmax}</div>'
-                    f'</div>'
-                )
-            bars_html += '</div>'
-            st.markdown(bars_html, unsafe_allow_html=True)
-
-        # Score & Migration explanation — determinista, sin LLM
-        explanation = score_explanation(analysis)
-        if explanation:
-            st.markdown(explanation, unsafe_allow_html=True)
-
-        # Migration hours estimate — sección destacada
-        st.markdown(migration_hours_card(inv), unsafe_allow_html=True)
-
-        # Risk flags
-        if flags:
-            for f_ in flags:
-                st.warning(f_)
-        else:
-            st.success('No migration risks detected')
-
-
-
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
-import io, re
-from datetime import date
-
-# ── PALETTE ───────────────────────────────────────────────────────────────────
-BG="07080B"; SURFACE="0E1118"; CARD="161B22"; BORDER="1C2030"
-TEXT="E8EDF5"; DIM="4B5568"; WHITE="FFFFFF"
-TEAL="00D4AA"; RED="F85149"; YELLOW="D29922"; ORANGE="F0883E"
-BLUE="00A8FF"; PURPLE="A78BFA"; GREEN="3FB950"
-
-def hf(c): return PatternFill("solid", fgColor=c)
-def bb(c=BORDER): return Border(bottom=Side(style="thin", color=c))
-def tb(c=BORDER): return Border(top=Side(style="thin", color=c))
-def full_border(c=BORDER):
-    s=Side(style="thin",color=c)
-    return Border(left=s,right=s,top=s,bottom=s)
 def score_color(s): return TEAL if s>=70 else YELLOW if s>=40 else RED
 def mig_color(l): return {"SIMPLE":TEAL,"MODERADO":YELLOW,"COMPLEJO":ORANGE,"MUY COMPLEJO":RED}.get(l,"4B5568")
 def safe_name(s): return re.sub(r'[\\/*?:\[\]]','_',s)[:31]
@@ -836,114 +942,107 @@ def generar_portfolio_excel_v2(results, raw_yamls=None):
 
 def ivr_loading_panel(current: int, total: int, current_name: str = "", phases: list = None) -> str:
     """
-    Loading panel nivel Apple — grafo IVR con nodos tipados que se iluminan
-    y conectan mientras avanza el análisis. Diseño oscuro, tipografía Syne.
-    phases: lista de strings para los pasos (solo para modo individual)
+    Graph-expansion loading animation — Linear/Vercel level.
+    Nodes appear progressively as analysis advances.
     """
-    pct = int((current / max(total, 1)) * 100) if total > 1 else min(current * 25, 95)
+    pct = int((current / max(total, 1)) * 100) if total > 1 else min(current * 22, 95)
 
-    # Grafo IVR — arquitectura realista de un flujo bancario tipo
-    nodes = [
-        # id, x%, y%, tipo, label, radio
-        ("start",  50, 8,  "ENTRY",    "ENTRY",  8),
-        ("auth",   28, 25, "AUTH",     "AUTH",   6),
-        ("menu1",  72, 25, "MENU",     "MENU",   6),
-        ("api1",   14, 45, "API",      "API",    5),
-        ("task1",  38, 45, "TASK",     "TASK",   5),
-        ("cond1",  62, 45, "COND",     "COND",   5),
-        ("xfer1",  86, 45, "XFER",     "XFER",   5),
-        ("vm1",    20, 65, "VOICE",    "TTS",    4),
-        ("exit1",  44, 65, "EXIT",     "EXIT",   4),
-        ("exit2",  68, 65, "EXIT",     "EXIT",   4),
-        ("exit3",  88, 65, "EXIT",     "EXIT",   4),
+    # Graph nodes — expand progressively
+    ALL_NODES = [
+        # id, cx%, cy%, type, label
+        ("n0",  50, 18,  "entry",    "ENTRY"),
+        ("n1",  25, 38,  "auth",     "AUTH"),
+        ("n2",  75, 38,  "menu",     "MENU"),
+        ("n3",  12, 60,  "api",      "API"),
+        ("n4",  38, 60,  "task",     "TASK"),
+        ("n5",  62, 60,  "cond",     "COND"),
+        ("n6",  88, 60,  "xfer",     "XFER"),
+        ("n7",  25, 80,  "exit",     "EXIT"),
+        ("n8",  62, 80,  "exit",     "EXIT"),
+        ("n9",  50, 93,  "tts",      "TTS"),
     ]
-    edges = [
-        ("start","auth"), ("start","menu1"),
-        ("auth","api1"), ("auth","task1"),
-        ("menu1","cond1"), ("menu1","xfer1"),
-        ("api1","vm1"), ("task1","exit1"),
-        ("cond1","exit2"), ("xfer1","exit3"),
-        ("vm1","exit1"),
+    ALL_EDGES = [
+        ("n0","n1"), ("n0","n2"),
+        ("n1","n3"), ("n1","n4"),
+        ("n2","n5"), ("n2","n6"),
+        ("n3","n7"), ("n4","n7"),
+        ("n5","n8"), ("n6","n8"),
+        ("n7","n9"), ("n8","n9"),
     ]
     TYPE_COLOR = {
-        "ENTRY": "#00D4AA", "AUTH": "#F85149", "MENU": "#00A8FF",
-        "API":   "#F0883E", "TASK": "#A78BFA", "COND": "#D29922",
-        "XFER":  "#00D4AA", "VOICE":"#3FB950", "EXIT": "#4B5568",
+        "entry": "#00D4AA", "auth": "#F85149", "menu": "#0090FF",
+        "api":   "#F0883E", "task": "#9B72F5", "cond": "#D29922",
+        "xfer":  "#00D4AA", "exit": "#2A3650", "tts":  "#3FB950",
     }
 
-    W, H = 360, 80
-    lit = max(1, int(len(nodes) * pct / 100))
+    W, H = 340, 105
+    lit = max(2, int(len(ALL_NODES) * max(pct, 15) / 100))
 
-    # Edges SVG
-    svg_e = ""
-    for (a, b) in edges:
-        n1 = next(n for n in nodes if n[0]==a)
-        n2 = next(n for n in nodes if n[0]==b)
-        x1,y1 = int(n1[1]*W/100), int(n1[2]*H/100)
-        x2,y2 = int(n2[1]*W/100), int(n2[2]*H/100)
-        i1 = next(i for i,n in enumerate(nodes) if n[0]==a)
-        i2 = next(i for i,n in enumerate(nodes) if n[0]==b)
-        lit_edge = i1 < lit and i2 < lit
-        c = TYPE_COLOR.get(n2[3], "#4B5568")
-        svg_e += '<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-width="%.1f" opacity="%.1f"/>' % (
-            x1, y1, x2, y2, c if lit_edge else "#1C2030", 1.2 if lit_edge else 0.8, 0.8 if lit_edge else 1.0)
+    # SVG edges
+    svg_edges = ""
+    for (a, b) in ALL_EDGES:
+        n1 = next(n for n in ALL_NODES if n[0]==a)
+        n2 = next(n for n in ALL_NODES if n[0]==b)
+        x1, y1 = int(n1[1]*W/100), int(n1[2]*H/100)
+        x2, y2 = int(n2[1]*W/100), int(n2[2]*H/100)
+        i1 = next(i for i,n in enumerate(ALL_NODES) if n[0]==a)
+        i2 = next(i for i,n in enumerate(ALL_NODES) if n[0]==b)
+        active = i1 < lit and i2 < lit
+        col = TYPE_COLOR.get(n2[3], "#2A3650")
+        stroke = col if active else "#0D1320"
+        opacity = "0.5" if active else "1"
+        svg_edges += (
+            '<line x1="%d" y1="%d" x2="%d" y2="%d" '            'stroke="%s" stroke-width="1" opacity="%s"/>'        ) % (x1, y1, x2, y2, stroke, opacity)
 
-    # Nodes SVG
-    svg_n = ""
-    for i, (nid, nx, ny, ntype, nlabel, nr) in enumerate(nodes):
+    # SVG nodes
+    svg_nodes = ""
+    for i, (nid, nx, ny, ntype, nlabel) in enumerate(ALL_NODES):
         cx, cy = int(nx*W/100), int(ny*H/100)
-        c = TYPE_COLOR.get(ntype, "#4B5568")
+        col = TYPE_COLOR.get(ntype, "#2A3650")
         is_lit = i < lit
         is_cur = i == lit - 1
-        op = "1" if is_lit else "0.12"
+        r = 5 if ntype in ("entry",) else 4
+        op = "1" if is_lit else "0.08"
+
         if is_cur:
-            # Outer pulse ring
-            svg_n += '<circle cx="%d" cy="%d" r="%d" fill="none" stroke="%s" stroke-width="1.5" opacity="0.3"><animate attributeName="r" values="%d;%d;%d" dur="1s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.3;0;0.3" dur="1s" repeatCount="indefinite"/></circle>' % (
-                cx, cy, nr+5, c, nr+5, nr+10, nr+5)
-            svg_n += '<circle cx="%d" cy="%d" r="%d" fill="%s" filter="drop-shadow(0 0 4px %s)"/>' % (cx, cy, nr, c, c)
+            # Pulse ring
+            svg_nodes += (
+                '<circle cx="%d" cy="%d" r="%d" fill="none" stroke="%s" stroke-width="1" opacity="0.25">'                '<animate attributeName="r" values="%d;%d;%d" dur="1.2s" repeatCount="indefinite"/>'                '<animate attributeName="opacity" values="0.25;0;0.25" dur="1.2s" repeatCount="indefinite"/>'                '</circle>'            ) % (cx, cy, r+5, col, r+5, r+9, r+5)
+            svg_nodes += '<circle cx="%d" cy="%d" r="%d" fill="%s"/>' % (cx, cy, r, col)
         else:
-            svg_n += '<circle cx="%d" cy="%d" r="%d" fill="%s" opacity="%s"/>' % (cx, cy, nr, c, op)
-        svg_n += '<text x="%d" y="%d" text-anchor="middle" fill="%s" opacity="%s" font-family="DM Mono,monospace" font-size="5.5" font-weight="600">%s</text>' % (
-            cx, cy+nr+8, c, op, nlabel)
+            svg_nodes += '<circle cx="%d" cy="%d" r="%d" fill="%s" opacity="%s"/>' % (cx, cy, r, col, op)
 
-    # Nombre del archivo actual (recortado)
-    fname_short = current_name.replace(".yaml","").replace(".yml","")[:34]
+        svg_nodes += (
+            '<text x="%d" y="%d" text-anchor="middle" fill="%s" opacity="%s" '            'font-family="DM Mono,monospace" font-size="5.5" letter-spacing="0.03em">%s</text>'        ) % (cx, cy+r+8, col, op, nlabel)
 
-    # Render de fases si es modo individual
+    fname_short = current_name.replace(".yaml","").replace(".yml","")[:36]
+
+    # Phases panel
     phases_html = ""
     if phases:
-        for idx2, ph in enumerate(phases):
-            if idx2 < current:
-                style = "color:#00D4AA;font-size:0.68rem;"
-                icon = "✓"
-            elif idx2 == current:
-                style = "color:#00A8FF;font-size:0.68rem;"
-                icon = "▶"
+        for idx, ph in enumerate(phases):
+            if idx < current:
+                cls = "ph-done"
+                dot = '<span style="color:#2A3650;font-size:0.6rem;">✓</span>'
+            elif idx == current:
+                cls = "ph-active"
+                dot = '<span style="color:#00D4AA;font-size:0.55rem;">▶</span>'
             else:
-                style = "color:#252D3D;font-size:0.68rem;"
-                icon = "○"
-            phases_html += '<div style="font-family:DM Mono,monospace;%s padding:3px 0;border-bottom:1px solid #0D1017;">%s %s</div>' % (style, icon, ph)
+                cls = "ph-pend"
+                dot = '<span style="color:#111820;font-size:0.6rem;">·</span>'
+            phases_html += f'<div class="{cls}">{dot}{ph}</div>'
 
-    counter_html = '<span style="font-family:Syne,sans-serif;font-size:1.1rem;font-weight:800;color:#00D4AA;">%d/%d</span>' % (current, total) if total > 1 else '<span style="font-family:DM Mono,monospace;font-size:0.65rem;color:#4B5568;">ANALYZING...</span>'
+    counter = (
+        '<span style="font-family:Syne,sans-serif;font-size:1rem;font-weight:700;color:#00D4AA;">' +
+        f"{current}/{total}" +
+        '</span>'
+    ) if total > 1 else '<span style="font-family:DM Mono,monospace;font-size:0.6rem;color:#2A3650;">ANALYZING</span>'
 
     return (
-        '<div style="background:#0B0D14;border:1px solid #1C2030;border-radius:12px;padding:1rem 1.25rem;">'
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">'
-        '<span style="font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;letter-spacing:0.1em;">PROCESSING FLOW</span>'
-        + counter_html
-        + '</div>'
-        '<svg viewBox="0 0 360 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:80px;display:block;">'
-        + svg_e + svg_n
-        + '</svg>'
-        + (phases_html if phases_html else '')
-        + '<div style="margin-top:0.6rem;">'
-          '<div style="display:flex;justify-content:space-between;font-family:DM Mono,monospace;font-size:0.6rem;color:#4B5568;margin-bottom:3px;">'
-          '<span style="color:#E8EDF5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:78%;">' + fname_short + '</span>'
-          '<span style="color:#00D4AA;">' + str(pct) + '%</span>'
-          '</div>'
-          '<div style="background:#0E1118;border-radius:2px;height:3px;">'
-          '<div style="background:linear-gradient(90deg,#00D4AA,#00A8FF);height:100%;width:' + str(pct) + '%;border-radius:2px;transition:width 0.3s ease;"></div>'
-          '</div></div></div>'
+        '<div style="background:#0C0F16;border:1px solid #111620;border-radius:10px;'        'padding:1.1rem 1.25rem;">'        '<div style="display:flex;justify-content:space-between;align-items:center;'        'margin-bottom:0.5rem;">'        '<span style="font-family:DM Mono,monospace;font-size:0.58rem;color:#2A3650;'        'letter-spacing:0.12em;text-transform:uppercase;">Processing</span>'        + counter +
+        '</div>'        '<svg viewBox="0 0 340 115" xmlns="http://www.w3.org/2000/svg" '        'style="width:100%;height:85px;display:block;">'        + svg_edges + svg_nodes +
+        '</svg>'        + ('<div style="margin:0.5rem 0;">' + phases_html + '</div>' if phases_html else "")
+        + '<div style="margin-top:0.6rem;">'        '<div style="display:flex;justify-content:space-between;'        'font-family:DM Mono,monospace;font-size:0.6rem;margin-bottom:3px;">'        '<span style="color:#3A4A61;overflow:hidden;text-overflow:ellipsis;'        'white-space:nowrap;max-width:78%;">' + fname_short + '</span>'        '<span style="color:#00D4AA;">' + str(pct) + '%</span>'        '</div>'        '<div style="background:#080A0F;border-radius:1px;height:2px;overflow:hidden;">'        '<div style="background:linear-gradient(90deg,#00D4AA,#0090FF);'        'height:100%;width:' + str(pct) + '%;border-radius:1px;'        'transition:width 0.35s ease;"></div>'        '</div></div></div>'
     )
 
 
@@ -1785,19 +1884,18 @@ def render_export_buttons(analysis, flow, results=None, flows_map=None, raw_yaml
 
 # ── HEADER ─────────────────────────────────────────────────────────────────────
 st.markdown(
-    '<div class="orch-header">'
-    '<div style="display:flex;align-items:center;">'
-    '<span class="orch-logo-main">Orchestr</span>'
-    '<span class="orch-logo-dot">IA</span>'
-    '<span class="orch-logo-badge">IVR · IA</span>'
+    '<div class="o-header">'
+    '<div class="o-logo">'
+    '<span class="o-logo-wordmark">Orchestr<em>IA</em></span>'
+    '<span class="o-logo-badge">IVR · IA</span>'
     '</div>'
-    '<span class="orch-tagline">Genesys Flow Intelligence · YAML · JSON · XML</span>'
+    '<span class="o-header-meta">Genesys Flow Intelligence&nbsp;&nbsp;·&nbsp;&nbsp;YAML · JSON · XML</span>'
     '</div>',
     unsafe_allow_html=True)
 
 modo = st.radio('', ['Individual Flow', 'Portfolio Batch'],
                 horizontal=True, label_visibility='collapsed')
-st.markdown('<div style="margin-top:1.75rem;"></div>', unsafe_allow_html=True)
+st.markdown('<div style="margin-top:2rem;"></div>', unsafe_allow_html=True)
 
 YAML_EXAMPLE = '''inboundCall:
   name: "Flujo Banca Retail"
@@ -1809,34 +1907,43 @@ YAML_EXAMPLE = '''inboundCall:
 
 # ── INDIVIDUAL ───────────────────────────────────────────────────────────────
 if modo == 'Individual Flow':
-    col_l, col_r = st.columns([1, 1], gap='large')
+    col_l, col_r = st.columns([13, 7], gap='large')
 
     with col_l:
-        st.markdown('<span class="lbl">Upload Flow</span>', unsafe_allow_html=True)
-        uploaded = st.file_uploader('', type=['yaml','yml','json','xml'],
-                                    label_visibility='collapsed')
+        st.markdown('<span class="o-label">Flow Input</span>', unsafe_allow_html=True)
+        uploaded = st.file_uploader(
+            '', type=['yaml','yml','json','xml'],
+            label_visibility='collapsed')
+
+        if uploaded:
+            st.markdown(
+                f'<div style="font-family:DM Mono,monospace;font-size:0.65rem;'                f'color:#3A4A61;padding:0.35rem 0;margin-bottom:0.5rem;">'                f'<span style="color:#00D4AA;">■</span>&nbsp;&nbsp;'                f'{uploaded.name}&nbsp;<span class="o-meta-sep">·</span>&nbsp;'                f'<span style="color:#2A3650;">{round(uploaded.size/1024,1)} KB</span>&nbsp;'                f'<span class="o-meta-sep">·</span>&nbsp;'                f'<span style="color:#2A3650;">YAML · Genesys Cloud · Architect Flow</span>'                f'</div>',
+                unsafe_allow_html=True)
+
         st.markdown(
-            '<div style="margin:0.6rem 0;text-align:center;font-family:DM Mono,'
-            'monospace;font-size:0.6rem;color:#1E2535;letter-spacing:0.12em;">'
-            '— OR PASTE YAML DIRECTLY —</div>',
+            '<div style="margin:0.75rem 0;text-align:center;font-family:DM Mono,'            'monospace;font-size:0.55rem;color:#161D2B;letter-spacing:0.14em;">'            '— or paste directly —</div>',
             unsafe_allow_html=True)
-        yaml_input = st.text_area('', height=220, placeholder=YAML_EXAMPLE,
-                                  label_visibility='collapsed')
+
+        yaml_input = st.text_area(
+            '', height=200,
+            placeholder="Paste a Genesys Architect flow\nSupported formats: YAML · JSON · XML",
+            label_visibility='collapsed')
+
         st.markdown(
-            '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:0.6rem;">'
-            '<span class="compat-chip">✓ inboundCall</span>'
-            '<span class="compat-chip">✓ YAML / JSON / XML</span>'
-            '<span class="compat-chip">✓ Genesys Cloud</span>'
-            '<span class="compat-chip">✓ Architect flows</span>'
-            '</div>',
+            '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:0.75rem;">'            '<span class="compat-chip">inboundCall</span>'            '<span class="compat-chip">YAML · JSON · XML</span>'            '<span class="compat-chip">Genesys Cloud</span>'            '<span class="compat-chip">Architect flows</span>'            '</div>',
             unsafe_allow_html=True)
 
     with col_r:
-        analizar_clicked = st.button('Analyze Flow →', type='primary', use_container_width=True)
+        analizar_clicked = st.button(
+            'Analyze Flow', type='primary', use_container_width=True)
+        st.markdown(
+            '<div class="o-helper">Includes structure, risk and migration insights.</div>',
+            unsafe_allow_html=True)
+
         loading_slot = st.empty()
 
-        # Empty state solo cuando no hay análisis ni input
         if not st.session_state.analysis and not uploaded and not yaml_input.strip():
+            st.markdown('<div style="margin-top:2rem;"></div>', unsafe_allow_html=True)
             st.markdown(empty_state_panel(), unsafe_allow_html=True)
 
         if analizar_clicked:
@@ -1860,7 +1967,7 @@ if modo == 'Individual Flow':
             loading_slot.markdown(
                 ivr_loading_panel(0, 1, filename, phases=PHASES),
                 unsafe_allow_html=True)
-            time.sleep(0.3)
+            time.sleep(0.25)
 
             flow, err = parse_content(content, filename)
             if err:
@@ -1875,7 +1982,7 @@ if modo == 'Individual Flow':
             analysis = IVRAnalyzer().analyze(flow)
 
             loading_slot.markdown(ivr_loading_panel(4, 1, filename, phases=PHASES), unsafe_allow_html=True)
-            time.sleep(0.3)
+            time.sleep(0.25)
             loading_slot.empty()
 
             st.session_state.analysis = analysis
@@ -1885,25 +1992,25 @@ if modo == 'Individual Flow':
             st.rerun()
 
     if st.session_state.analysis and modo == 'Individual Flow':
-        st.divider()
-        # Export buttons — homologados con batch
+        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
         render_export_buttons(
             st.session_state.analysis,
             st.session_state.flow,
             mode='individual')
-        st.divider()
+        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
         mostrar_resultado(st.session_state.analysis,
                           flow=st.session_state.flow, key_prefix='main')
+
 
 # ── BATCH ─────────────────────────────────────────────────────────────────────
 else:
     if 'queued_files' not in st.session_state:
         st.session_state.queued_files = {}
 
-    col_l, col_r = st.columns([1, 1], gap='large')
+    col_l, col_r = st.columns([13, 7], gap='large')
 
     with col_l:
-        st.markdown('<span class="lbl">Upload Portfolio · up to 50 flows</span>',
+        st.markdown('<span class="o-label">Portfolio Upload · up to 50 flows</span>',
                     unsafe_allow_html=True)
         new_uploads = st.file_uploader('', type=['yaml','yml','json','xml'],
                                        accept_multiple_files=True,
@@ -1913,20 +2020,19 @@ else:
             for f in new_uploads:
                 if f.name not in st.session_state.queued_files:
                     st.session_state.queued_files[f.name] = f.read()
+
         queued  = st.session_state.queued_files
         total_q = len(queued)
+
         if total_q > 0:
             st.markdown(
-                f'<div style="font-family:DM Mono,monospace;font-size:0.7rem;'
-                f'color:#00D4AA;margin-top:0.5rem;">'
-                f'{total_q} file(s) queued · {min(total_q,50)} will be analyzed</div>',
+                f'<div style="font-family:DM Mono,monospace;font-size:0.62rem;'                f'color:#00D4AA;margin:0.6rem 0 0.25rem;">'                f'{total_q} file(s) queued · {min(total_q,50)} will be analyzed</div>',
                 unsafe_allow_html=True)
             for fname in list(queued.keys()):
-                c1, c2 = st.columns([6,1])
+                c1, c2 = st.columns([9,1])
                 with c1:
                     st.markdown(
-                        f'<div style="font-family:DM Mono,monospace;font-size:0.7rem;'
-                        f'color:#4B5568;padding:2px 0;">{fname}</div>',
+                        f'<div style="font-family:DM Mono,monospace;font-size:0.65rem;'                        f'color:#3A4A61;padding:3px 0;border-bottom:1px solid #0E1320;">{fname}</div>',
                         unsafe_allow_html=True)
                 with c2:
                     if st.button('✕', key=f'del_{fname}', help=f'Remove {fname}'):
@@ -1936,21 +2042,19 @@ else:
                 st.session_state.queued_files = {}
                 st.rerun()
 
+        st.markdown(
+            '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:1rem;">'            '<span class="compat-chip">Up to 50 flows</span>'            '<span class="compat-chip">Add one by one</span>'            '<span class="compat-chip">Auto-ranked by score</span>'            '<span class="compat-chip">Excel + PDF export</span>'            '</div>', unsafe_allow_html=True)
+
     with col_r:
-        run_batch = st.button('Analyze Portfolio →', type='primary',
+        run_batch = st.button('Analyze Portfolio', type='primary',
                                disabled=not st.session_state.queued_files)
+        st.markdown(
+            '<div class="o-helper">All flows ranked by quality score.</div>',
+            unsafe_allow_html=True)
         loading_slot = st.empty()
         if not st.session_state.batch_results and not st.session_state.queued_files:
+            st.markdown('<div style="margin-top:2rem;"></div>', unsafe_allow_html=True)
             st.markdown(empty_state_panel(), unsafe_allow_html=True)
-
-    # Feature chips — fuera de columnas, mismos en ambos modos
-    st.markdown(
-        '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:1rem;">'
-        '<span class="compat-chip">✓ Up to 50 flows</span>'
-        '<span class="compat-chip">✓ Add files one by one</span>'
-        '<span class="compat-chip">✓ Auto-ranked by score</span>'
-        '<span class="compat-chip">✓ Excel + PDF export</span>'
-        '</div>', unsafe_allow_html=True)
 
     uploaded_files = st.session_state.queued_files
 
@@ -1976,9 +2080,9 @@ else:
                     raw_yamls_map[fname_k] = _yaml.safe_load(raw_content)
                 except: pass
         loading_slot.empty()
-        st.session_state.batch_results  = resultados
-        st.session_state.batch_flows    = flows_map
-        st.session_state.batch_raw_yamls = raw_yamls_map
+        st.session_state.batch_results   = resultados
+        st.session_state.batch_flows      = flows_map
+        st.session_state.batch_raw_yamls  = raw_yamls_map
         st.rerun()
 
     if st.session_state.batch_results:
@@ -1987,10 +2091,8 @@ else:
         ok = sorted([r for r in results if 'error' not in r],
                     key=lambda x: x.get('score',0), reverse=True)
 
-        # Portfolio summary card
         st.markdown(portfolio_summary_card(results), unsafe_allow_html=True)
 
-        # Export buttons — homologados con individual
         render_export_buttons(
             None, None,
             results=results,
@@ -1999,16 +2101,18 @@ else:
             mode='portfolio')
 
         st.markdown(
-            f'<div style="margin:1.5rem 0 1rem;" class="lbl">'
-            f'Portfolio · {len(ok)} flows · ranked by quality score</div>',
+            f'<div style="margin:1.5rem 0 0.75rem;" class="o-label">'            f'Portfolio · {len(ok)} flows · ranked by quality score</div>',
             unsafe_allow_html=True)
 
         for idx, r in enumerate(ok):
             s  = r.get('score',0)
             ml = r.get('inventory',{}).get('migration_level','—')
             fname = r['filename'].replace('.yaml','').replace('.yml','')
-            dot = '🟢' if s >= 70 else '🟡' if s >= 40 else '🔴'
-            with st.expander(f'{dot}  {fname}   ·   {s}/100   ·   {ml}'):
+            sc = '#00D4AA' if s >= 70 else ('#D29922' if s >= 40 else '#F85149')
+            header_html = (
+                f'<span style="font-family:DM Mono,monospace;font-size:0.65rem;'                f'color:{sc};margin-right:0.75rem;">{s}/100</span>'                f'<span style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.82rem;'                f'color:#6B7E97;">{fname}</span>'                f'<span style="font-family:DM Mono,monospace;font-size:0.6rem;'                f'color:#2A3650;margin-left:0.75rem;">{ml}</span>'
+            )
+            with st.expander(f"{s}/100  {fname}  · {ml}"):
                 mostrar_resultado(r, flow=flows_map.get(r['filename']),
                                   key_prefix=f'batch_{idx}')
         for r in [x for x in results if 'error' in x]:
