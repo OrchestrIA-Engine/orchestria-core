@@ -1111,7 +1111,7 @@ def generar_portfolio_pdf(results, flows_map) -> bytes:
     from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
                                     Table, TableStyle, HRFlowable, PageBreak)
     from reportlab.lib.units import cm
-    from datetime import datetime
+    from datetime import datetime, date
 
     # ── PALETA ────────────────────────────────────────────────────────────────
     navy    = HexColor('#1E3A5F')
