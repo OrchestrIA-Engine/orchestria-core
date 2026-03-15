@@ -3,11 +3,11 @@ sys.path.insert(0, os.getcwd())
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import streamlit as st
 import json, time, tempfile
+from datetime import datetime, date
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import io, re
-from datetime import datetime, date
 
 from src.parsers.genesys_yaml_parser import GenesysYAMLParser
 from src.agents.analyzer import IVRAnalyzer
@@ -520,6 +520,18 @@ def empty_state_panel() -> str:
         '</div>'
     )
 
+
+
+def hf(c): return PatternFill("solid", fgColor=c)
+def bb(c="1C2030"): return Border(bottom=Side(style="thin", color=c))
+def safe_name(s): return re.sub(r'[\\/*?:\[\]]','_',s)[:31]
+def set_cols(ws, widths):
+    for i,w in enumerate(widths,1):
+        ws.column_dimensions[get_column_letter(i)].width=w
+def bg_all(ws, rows=400, cols=20):
+    for row in ws.iter_rows(min_row=1,max_row=rows,min_col=1,max_col=cols):
+        for c in row:
+            c.fill = hf("07080B")
 
 # ── COLOR CONSTANTS ──────────────────────────────────────────────────────────
 BG="07080B"; SURFACE="0E1118"; CARD="161B22"; BORDER="1C2030"
