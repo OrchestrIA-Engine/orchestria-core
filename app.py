@@ -991,6 +991,60 @@ def generar_portfolio_excel_v2(results, raw_yamls=None):
 
 
 
+
+def ivr_loading_panel(current: int, total: int, current_name: str = "", phases: list = None) -> str:
+    pct = int((current / max(total, 1)) * 100) if total > 1 else min(current * 22, 95)
+    lit = max(2, int(11 * max(pct, 15) / 100))
+    cur = lit - 1
+    fname = current_name.replace(".yaml","").replace(".yml","")[:36]
+    p = str(pct)
+    NODES = [(170,18,"entry","ENTRY",9),(75,55,"auth","AUTH",7),(265,55,"menu","MENU",7),(28,98,"api","API",6),(115,98,"task","TASK",6),(210,98,"cond","COND",6),(305,98,"xfer","XFER",6),(65,142,"exit","EXIT",5),(170,142,"exit","EXIT",5),(285,142,"exit","EXIT",5),(170,172,"tts","TTS",5)]
+    EDGES = [(0,1),(0,2),(1,3),(1,4),(2,5),(2,6),(3,7),(4,7),(5,8),(6,9),(7,10),(8,10),(9,10)]
+    C = {"entry":"00D4AA","auth":"F85149","menu":"0090FF","api":"F0883E","task":"9B72F5","cond":"D29922","xfer":"00D4AA","exit":"2A3A50","tts":"3FB950"}
+    defs = '<defs><marker id="a0" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0.5 L4.5,2.5 L0,4.5 Z" fill="#0D1828"/></marker>'
+    for i,(cx,cy,nt,lb,r) in enumerate(NODES):
+        col=C.get(nt,"2A3650")
+        defs+=f'<marker id="a{i+1}" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0.5 L4.5,2.5 L0,4.5 Z" fill="#{col}" opacity="0.5"/></marker>'
+    defs+='<filter id="gl" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="gl2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>'
+    bg='<rect width="340" height="190" fill="#06080C"/>'
+    for x in range(0,341,34): bg+=f'<line x1="{x}" y1="0" x2="{x}" y2="190" stroke="#0A0D14" stroke-width="0.5"/>'
+    for y in range(0,191,19): bg+=f'<line x1="0" y1="{y}" x2="340" y2="{y}" stroke="#0A0D14" stroke-width="0.5"/>'
+    bg+='<line x1="0" y1="0" x2="340" y2="0" stroke="#00D4AA" stroke-width="1.5" opacity="0"><animateTransform attributeName="transform" type="translate" values="0,0;0,190" dur="2.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;0.08;0.05;0" dur="2.8s" repeatCount="indefinite"/></line>'
+    edges=""
+    for (a,b) in EDGES:
+        na=NODES[a];nb=NODES[b];x1,y1,x2,y2=na[0],na[1],nb[0],nb[1]
+        col=C.get(nb[2],"2A3650");L=((x2-x1)**2+(y2-y1)**2)**0.5;active=a<lit and b<lit
+        if active:
+            d=f"{max(a,b)*0.15:.2f}s"
+            edges+=f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#{col}" stroke-width="1.2" opacity="0" stroke-dasharray="{L:.0f}" stroke-dashoffset="{L:.0f}" marker-end="url(#a{b+1})"><animate attributeName="opacity" from="0" to="0.5" dur="0.3s" begin="{d}" fill="freeze"/><animate attributeName="stroke-dashoffset" from="{L:.0f}" to="0" dur="0.5s" begin="{d}" fill="freeze"/></line>'
+            if a<cur and L>10:
+                pd=f"{1.3+(a%3)*0.25:.2f}s";pb=f"{(b%4)*0.35:.2f}s"
+                edges+=f'<circle r="2.5" fill="#{col}" opacity="0"><animate attributeName="opacity" values="0;0.9;0" dur="{pd}" begin="{pb}" repeatCount="indefinite"/><animateMotion dur="{pd}" begin="{pb}" repeatCount="indefinite"><mpath href="#ep{a}{b}"/></animateMotion></circle><path id="ep{a}{b}" d="M{x1},{y1} L{x2},{y2}" fill="none" stroke="none"/>'
+        else:
+            edges+=f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#0C1520" stroke-width="0.75" marker-end="url(#a0)"/>'
+    nodes=""
+    for i,(cx,cy,nt,lb,r) in enumerate(NODES):
+        col=C.get(nt,"2A3650");d=f"{i*0.14:.2f}s"
+        if i>=lit:
+            nodes+=f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="#0A0D14" stroke="#0C1828" stroke-width="0.75" opacity="0.4"/><text x="{cx}" y="{cy+r+9}" text-anchor="middle" fill="#0C1828" font-family="DM Mono,monospace" font-size="5.5">{lb}</text>'
+        elif i==cur:
+            for rr,rd,ro in [(r+5,"1.4s","0.35"),(r+3,"1.4s","0.5"),(r+1,"1.4s","0.65")]:
+                rb=f"{(rr-r-1)*0.12:.2f}s"
+                nodes+=f'<circle cx="{cx}" cy="{cy}" r="{rr}" fill="none" stroke="#{col}" stroke-width="0.75" opacity="0"><animate attributeName="r" values="{rr};{rr+18}" dur="{rd}" begin="{rb}" repeatCount="indefinite"/><animate attributeName="opacity" values="{ro};0" dur="{rd}" begin="{rb}" repeatCount="indefinite"/></circle>'
+            nodes+=f'<circle cx="{cx}" cy="{cy}" r="0" fill="#{col}" filter="url(#gl)" opacity="0"><animate attributeName="r" from="0" to="{r}" dur="0.4s" begin="{d}" fill="freeze"/><animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="{d}" fill="freeze"/><animate attributeName="r" values="{r};{r*1.35:.1f};{r};{r*1.2:.1f};{r}" dur="1.5s" begin="{d}" repeatCount="indefinite"/></circle><circle cx="{cx-1}" cy="{cy-1}" r="0" fill="white" opacity="0"><animate attributeName="r" from="0" to="{max(2,r-3)}" dur="0.4s" begin="{d}" fill="freeze"/><animate attributeName="opacity" from="0" to="0.2" dur="0.3s" begin="{d}" fill="freeze"/></circle><text x="{cx}" y="{cy+r+9}" text-anchor="middle" fill="#{col}" font-family="DM Mono,monospace" font-size="5.5" font-weight="600">{lb}</text>'
+        else:
+            nodes+=f'<circle cx="{cx}" cy="{cy}" r="0" fill="#{col}" filter="url(#gl2)" opacity="0"><animate attributeName="r" from="0" to="{r}" dur="0.35s" begin="{d}" fill="freeze"/><animate attributeName="opacity" from="0" to="0.85" dur="0.3s" begin="{d}" fill="freeze"/><animate attributeName="opacity" values="0.7;1;0.7" dur="{1.6+i*0.12:.2f}s" begin="{d}" repeatCount="indefinite"/></circle><circle cx="{cx-1}" cy="{cy-1}" r="0" fill="white" opacity="0"><animate attributeName="r" from="0" to="{max(1,r-3)}" dur="0.35s" begin="{d}" fill="freeze"/><animate attributeName="opacity" from="0" to="0.15" dur="0.3s" begin="{d}" fill="freeze"/></circle><text x="{cx}" y="{cy+r+9}" text-anchor="middle" fill="#{col}" font-family="DM Mono,monospace" font-size="5.5" opacity="0.65">{lb}</text>'
+    ph_html=""
+    if phases:
+        for idx,ph in enumerate(phases):
+            if idx<current: dot='<span style="color:#1A2840;margin-right:0.5rem;">✓</span>';st="color:#1A2840;"
+            elif idx==current: dot='<span style="color:#00D4AA;margin-right:0.5rem;">▶</span>';st="color:#C8D3E0;font-weight:500;"
+            else: dot='<span style="color:#0A0E16;margin-right:0.5rem;">·</span>';st="color:#0A0E16;"
+            ph_html+=f'<div style="font-family:DM Mono,monospace;font-size:0.65rem;{st}padding:3px 0;border-bottom:1px solid #080C12;display:flex;align-items:center;">{dot}{ph}</div>'
+    ctr=(f'<span style="font-family:Syne,sans-serif;font-size:0.9rem;font-weight:800;color:#00D4AA;">{current}/{total}</span>' if total>1 else '<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#1A2840;letter-spacing:0.14em;text-transform:uppercase;">analyzing</span>')
+    return ('<div style="background:#06080C;border:1px solid #0C1118;border-radius:12px;padding:1rem 1.2rem;overflow:hidden;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;"><span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#1A2840;letter-spacing:0.14em;text-transform:uppercase;">Flow Analysis</span>'+ctr+'</div>'+f'<svg viewBox="0 0 340 190" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:120px;display:block;margin-bottom:0.5rem;">'+defs+bg+edges+nodes+'</svg>'+('<div style="margin-bottom:0.5rem;">'+ph_html+'</div>' if ph_html else "")+'<div style="display:flex;justify-content:space-between;font-family:DM Mono,monospace;font-size:0.58rem;margin-bottom:3px;"><span style="color:#2A3E56;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80%;">'+fname+'</span><span style="color:#00D4AA;font-weight:500;">'+p+'%</span></div><div style="background:#080A0F;border-radius:1px;height:1.5px;overflow:hidden;"><div style="background:linear-gradient(90deg,#00D4AA 0%,#0090FF 50%,#9B72F5 100%);height:100%;width:'+p+'%;border-radius:1px;"></div></div></div>')
+
+
 def generar_portfolio_pdf(results, flows_map) -> bytes:
     """PDF consolidado: portada portfolio + 1 página por flujo."""
     import io, json, re, os
