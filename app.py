@@ -458,7 +458,8 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
 
 # ── SESSION STATE ──────────────────────────────────────────────────────────────
 for k, v in [('analysis', None), ('flow', None),
-              ('batch_results', []), ('batch_flows', {})]:
+              ('batch_results', []), ('batch_flows', {}),
+              ('refactoring', None), ('raw_yaml', '')]:
     if k not in st.session_state:
         st.session_state[k] = v
 
@@ -2490,6 +2491,8 @@ if modo == 'Individual Flow':
             loading_slot.empty()
 
             st.session_state.analysis = analysis
+            st.session_state.raw_yaml = content
+            st.session_state.refactoring = None
             st.session_state.flow = flow
             st.session_state['pdf_bytes_main'] = None
             st.session_state['excel_bytes_main'] = None
