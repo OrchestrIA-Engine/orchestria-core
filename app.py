@@ -13,13 +13,6 @@ from src.parsers.genesys_yaml_parser import GenesysYAMLParser
 from src.agents.analyzer import IVRAnalyzer
 from src.agents.documentor import IVRDocumentor
 
-import os as _os
-_key = _os.environ.get('ANTHROPIC_API_KEY','')
-if not _key:
-    import streamlit as _st
-    _st.error('ERROR: ANTHROPIC_API_KEY no encontrada en entorno Railway')
-    _st.stop()
-
 st.set_page_config(page_title='OrchestrIA', layout='wide', page_icon='🎙️',
                    initial_sidebar_state='collapsed')
 
