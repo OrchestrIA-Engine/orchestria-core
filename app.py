@@ -1924,24 +1924,24 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
         DIM_COLORS = {'D1':'00D4AA','D2':'F0883E','D3':'0090FF','D4':'F85149','D5':'9B72F5','D6':'D29922'}
         cols = st.columns(len(det))
         for col, (key, dim) in zip(cols, det.items()):
-            col_hex = DIM_COLORS.get(key, '4A6080')
-            pct = dim.get('pct', 0)
-            earned = dim.get('score')
-            col.markdown(
-                f'<div style="border:1px solid #0C1520;border-radius:8px;padding:0.75rem 0.8rem;">'
-                f'<div style="font-family:DM Mono,monospace;font-size:0.55rem;color:#{col_hex};'
-                f'letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;">{key}</div>'
-                f'<div style="font-family:Syne,sans-serif;font-size:1.3rem;font-weight:800;'
-                f'color:#{col_hex};line-height:1;">{earned}<span style="font-size:0.7rem;'
-                f'color:#1E2840;font-family:DM Mono,monospace;">/{max_p}</span></div>'
-                f'<div style="background:#0A0D14;border-radius:1px;height:2px;margin:0.4rem 0;">'
-                f'<div style="background:#{col_hex};height:100%;width:{pct}%;border-radius:1px;"></div></div>'
-                f'<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.7rem;'
-                f'color:#2A3E56;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
-                f'{dim.get("name","")}</div>'
-                + (f'<div style="font-family:DM Mono,monospace;font-size:0.58rem;color:#F85149;margin-top:0.3rem;">{n_issues} issue(s)</div>' if n_issues else '') +
-                f'</div>',
-                unsafe_allow_html=True)
+            col_hex  = DIM_COLORS.get(key, '4A6080')
+            pct_val  = dim.get('pct', 0)
+            earned_v = dim.get('score', 0)
+            maxp_v   = dim.get('max', 0)
+            niss_v   = len(dim.get('issues', []))
+            dname_v  = dim.get('name', '')
+            iss_h    = ('<div style="font-family:DM Mono,monospace;font-size:0.58rem;color:#F85149;margin-top:0.3rem;">' + str(niss_v) + ' issue(s)</div>') if niss_v else ''
+            card_h   = (
+                '<div style="border:1px solid #0C1520;border-radius:8px;padding:0.75rem 0.8rem;">'
+                '<div style="font-family:DM Mono,monospace;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;color:#' + col_hex + ';">' + key + '</div>'
+                '<div style="font-family:Syne,sans-serif;font-size:1.3rem;font-weight:800;line-height:1;color:#' + col_hex + ';">' + str(earned_v) + '<span style="font-size:0.7rem;color:#1E2840;font-family:DM Mono,monospace;">/' + str(maxp_v) + '</span></div>'
+                '<div style="background:#0A0D14;border-radius:1px;height:2px;margin:0.4rem 0;">'
+                '<div style="background:#' + col_hex + ';height:100%;width:' + str(pct_val) + '%;border-radius:1px;"></div></div>'
+                '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.7rem;color:#2A3E56;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + dname_v + '</div>'
+                + iss_h +
+                '</div>'
+            )
+            col.markdown(card_h, unsafe_allow_html=True)
         if det_issues:
             st.markdown('<div style="margin-top:1.25rem;"></div>', unsafe_allow_html=True)
             SEV_COLOR = {'CRITICAL':'F85149','HIGH':'F85149','MEDIUM':'D29922','LOW':'4A6080'}
