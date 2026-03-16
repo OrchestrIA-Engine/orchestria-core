@@ -1964,6 +1964,72 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
                     f'</div>',
                     unsafe_allow_html=True)
 
+    # REFACTORING PROPOSALS
+    det_issues = analysis.get('deterministic_issues', [])
+    fixable = [i for i in det_issues if i.get('code') in ('DEAD_ENDS','MENUS_NO_INPUT_HANDLER','MISSING_FALLBACKS')]
+    if fixable and st.session_state.get('raw_yaml'):
+        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+        st.markdown('<span class="o-label">Refactoring Proposals</span>', unsafe_allow_html=True)
+        score_gain = sum(i.get('penalty', 0) for i in fixable)
+        cur_score = analysis.get('score', 0)
+        new_score = min(cur_score + score_gain, 100)
+        st.markdown(
+            '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.82rem;'
+            'color:#4A6080;margin-bottom:1rem;">'
+            'OrchestrIA can auto-fix <strong style="color:#C8D3E0;">'
+            + str(len(fixable)) +
+            ' issue(s)</strong> — estimated score improvement: '
+            '<strong style="color:#00D4AA;">'
+            + str(cur_score) + ' → ' + str(new_score) +
+            '/100</strong></div>',
+            unsafe_allow_html=True)
+        if st.button('⚡ Generate Fix Proposals', key='gen_refactor_' + key_prefix):
+            with st.spinner('Generating proposals...'):
+                try:
+                    from src.agents.refactoring_agent import RefactoringAgent
+                    agent = RefactoringAgent()
+                    result = agent.refactor(
+                        yaml_content=st.session_state.raw_yaml,
+                        issues=fixable,
+                        flow_name=getattr(flow, 'flow_name', '') if flow else ''
+                    )
+                    st.session_state.refactoring = result.to_dict()
+                except Exception as ex:
+                    st.error('Error: ' + str(ex))
+        ref = st.session_state.get('refactoring')
+        if ref and ref.get('proposals'):
+            for pi, prop in enumerate(ref['proposals']):
+                sev = prop.get('severity', 'LOW')
+                sev_colors = {'CRITICAL': 'F85149', 'HIGH': 'F85149', 'MEDIUM': 'D29922', 'LOW': '4A6080'}
+                sev_c = sev_colors.get(sev, '4A6080')
+                label = '[' + prop.get('issue_code', '') + '] ' + prop.get('node_id', '') + ' — ' + prop.get('description', '')
+                with st.expander(label[:90]):
+                    st.markdown(
+                        '<div style="font-family:DM Mono,monospace;font-size:0.68rem;'
+                        'color:#8BA0B8;margin-bottom:0.75rem;">'
+                        + prop.get('explanation', '') + '</div>',
+                        unsafe_allow_html=True)
+                    c1, c2 = st.columns(2)
+                    c1.markdown('<span class="o-label">Original</span>', unsafe_allow_html=True)
+                    c1.code(prop.get('original_yaml', ''), language='yaml')
+                    c2.markdown('<span class="o-label">Proposed Fix</span>', unsafe_allow_html=True)
+                    c2.code(prop.get('proposed_yaml', ''), language='yaml')
+                    ca, cr, _ = st.columns([1, 1, 4])
+                    if ca.button('✅ Accept', key='acc_' + key_prefix + '_' + str(pi)):
+                        ref['proposals'][pi]['accepted'] = True
+                        st.success('Accepted')
+                    if cr.button('❌ Reject', key='rej_' + key_prefix + '_' + str(pi)):
+                        ref['proposals'][pi]['accepted'] = False
+                        st.error('Rejected')
+            accepted = [p for p in ref['proposals'] if p.get('accepted') is True]
+            if accepted:
+                st.markdown(
+                    '<div style="font-family:DM Mono,monospace;font-size:0.68rem;'
+                    'color:#00D4AA;margin-top:0.75rem;">'
+                    + str(len(accepted)) + ' proposal(s) accepted — JIRA Epic Generator coming in Sprint 12'
+                    + '</div>',
+                    unsafe_allow_html=True)
+
     st.markdown('<div id="o-arch" class="o-anchor"></div>', unsafe_allow_html=True)
     # ── FLOW ARCHITEAPH ───────────────────────────────────────────────
     if flow and flow.nodes:
