@@ -1915,8 +1915,56 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
         for i in imps:
             st.success(i)
 
+    # ── DETERMINISTIC SCORE BREAKDOWN ──────────────────────────────────────────
+    det = analysis.get('deterministic_breakdown', {})
+    det_issues = analysis.get('deterministic_issues', [])
+    if det:
+        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+        st.markdown('<span class="o-label">Quality Score Breakdown</span>', unsafe_allow_html=True)
+        DIM_COLORS = {'D1':'00D4AA','D2':'F0883E','D3':'0090FF','D4':'F85149','D5':'9B72F5','D6':'D29922'}
+        cols = st.columns(len(det))
+        for col, (key, dim) in zip(cols, det.items()):
+            col_hex = DIM_COLORS.get(key, '4A6080')
+            pct = dim.get('pct', 0)
+            earned = dim.get('score')
+            col.markdown(
+                f'<div style="border:1px solid #0C1520;border-radius:8px;padding:0.75rem 0.8rem;">'
+                f'<div style="font-family:DM Mono,monospace;font-size:0.55rem;color:#{col_hex};'
+                f'letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;">{key}</div>'
+                f'<div style="font-family:Syne,sans-serif;font-size:1.3rem;font-weight:800;'
+                f'color:#{col_hex};line-height:1;">{earned}<span style="font-size:0.7rem;'
+                f'color:#1E2840;font-family:DM Mono,monospace;">/{max_p}</span></div>'
+                f'<div style="background:#0A0D14;border-radius:1px;height:2px;margin:0.4rem 0;">'
+                f'<div style="background:#{col_hex};height:100%;width:{pct}%;border-radius:1px;"></div></div>'
+                f'<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.7rem;'
+                f'color:#2A3E56;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+                f'{dim.get("name","")}</div>'
+                + (f'<div style="font-family:DM Mono,monospace;font-size:0.58rem;color:#F85149;margin-top:0.3rem;">{n_issues} issue(s)</div>' if n_issues else '') +
+                f'</div>',
+                unsafe_allow_html=True)
+        if det_issues:
+            st.markdown('<div style="margin-top:1.25rem;"></div>', unsafe_allow_html=True)
+            SEV_COLOR = {'CRITICAL':'F85149','HIGH':'F85149','MEDIUM':'D29922','LOW':'4A6080'}
+            for issue in sorted(det_issues, key=lambda x: {'CRITICAL':0,'HIGH':1,'MEDIUM':2,'LOW':3}.get(x.get('severity','LOW'),4)):
+                sev = issue.get('severity','')
+                sc  = SEV_COLOR.get(sev,'4A6080')
+                dim_key = issue.get('dim','')
+                dim_col = DIM_COLORS.get(dim_key,'4A6080')
+                fix = issue.get('fix','')
+                st.markdown(
+                    f'<div style="border:1px solid #0C1520;border-left:3px solid #{sc};'
+                    f'border-radius:6px;padding:0.6rem 0.85rem;margin-bottom:0.4rem;">'
+                    f'<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.25rem;">'
+                    f'<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#{dim_col};letter-spacing:0.1em;">{dim_key}</span>'
+                    f'<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#{sc};letter-spacing:0.1em;">{sev}</span>'
+                    f'<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#1E2840;">−{issue.get("penalty",0)} pts</span></div>'
+                    f'<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.82rem;color:#8BA0B8;margin-bottom:0.2rem;">{issue.get("message","")}</div>'
+                    + (f'<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:#1E3050;">→ {fix}</div>' if fix else '') +
+                    f'</div>',
+                    unsafe_allow_html=True)
+
     st.markdown('<div id="o-arch" class="o-anchor"></div>', unsafe_allow_html=True)
-    # ── FLOW ARCHITECTURE GRAPH ───────────────────────────────────────────────
+    # ── FLOW ARCHITEAPH ───────────────────────────────────────────────
     if flow and flow.nodes:
         st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
         st.markdown('<span class="o-label">Flow Architecture</span>', unsafe_allow_html=True)
