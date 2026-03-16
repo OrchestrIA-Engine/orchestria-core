@@ -91,36 +91,27 @@ hr { border: none !important; border-top: 1px solid #0C1118 !important; margin: 
     to   { opacity: 1; transform: translateY(0); }
 }
 .o-nav-item {
-    font-family: 'DM Mono', monospace !important;
-    font-size: 0.6rem !important;
-    color: #2A3E56 !important;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    color: #1E2E42;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    padding: 0.35rem 0.9rem;
+    padding: 0.4rem 1rem;
     border-radius: 4px;
     cursor: pointer;
-    text-decoration: none !important;
+    text-decoration: none;
     transition: all 0.15s ease;
     white-space: nowrap;
-    border: 1px solid transparent;
 }
-.o-nav-item:hover {
-    color: #8BA8 !important;
-    background: #0C1118;
-    border-color: #0F1825;
-    text-decoration: none !important;
-}
-.o-nav-item:visited { color: #2A3E56 !important; }
-.o-nav-item.active { color: #00D4AA !important; }
--score {
+.o-nav-item:hover { color: #6B8099; background: #0C1118; }
+.o-nav-item.active { color: #00D4AA; }
+.o-nav-score {
     font-family: 'Syne', sans-serif;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    padding: 0.25rem 0.6rem;
+    padding: 0.3rem 0.75rem;
     border-radius: 4px;
-    margin-right: 0.6rem;
-    background: #0A0D14;
-    border: 1px solid #0F1825;
+    margin-right: 0.5rem;
 }
 .o-nav-sep { color: #0C1118; margin: 0 0.25rem; font-size: 0.7rem; }
 
@@ -347,12 +338,11 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
     line-height: 1.4;
 }
 .o-capability-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     flex-shrink: 0;
-    margin-top: 6px;
-    opacity: 0.6;
+    margin-top: 5px;
 }
 
 /* ── TYPOGRAPHY ──────────────────────────────────────────────────────────── */
@@ -513,13 +503,6 @@ def generar_pdf_bytes(flow, analysis):
     IVRDocumentor().generate_pdf(flow, enriched, path)
     with open(path, 'rb') as f: data = f.read()
     os.unlink(path); return data
-
-
-# ── COLOR CONSTANTS ──────────────────────────────────────────────────────────
-BG="07080B"; SURFACE="0E1118"; CARD="161B22"; BORDER="1C2030"
-TEXT="E8EDF5"; DIM="4B5568"; WHITE="FFFFFF"
-TEAL="00D4AA"; RED="F85149"; YELLOW="D29922"; ORANGE="F0883E"
-BLUE="0090FF"; PURPLE="A78BFA"; GREEN="3FB950"
 
 def score_color(s):
     return '#00D4AA' if s >= 70 else '#D29922' if s >= 40 else '#F85149'
@@ -2557,15 +2540,18 @@ if modo == 'Individual Flow':
         # Sticky nav
         _s = st.session_state.analysis.get('score', 0)
         _sc = '#00D4AA' if _s >= 70 else '#D29922' if _s >= 40 else '#F85149'
+        _btn_m = "display:inline-block;font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.85rem;border-radius:5px;border:1px solid #162030;background:#0A0D14;text-decoration:none;cursor:pointer;white-space:nowrap;color:#3A5570;"
+        _btn_a = "display:inline-block;font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.85rem;border-radius:5px;border:1px solid #00D4AA25;background:#00D4AA0A;text-decoration:none;cursor:pointer;white-space:nowrap;color:#00D4AA;"
+        _wrap  = "position:sticky;top:0;z-index:100;background:rgba(6,8,12,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid #0C1118;padding:0.5rem 3.5rem;margin:0 -3.5rem 2rem;display:flex;align-items:center;gap:0.4rem;"
         st.markdown(
-            f'<div style="position:sticky;top:0;z-index:100;background:#06080Cee;backdrop-filter:blur(12px);border-bottom:1px solid #0C1118;padding:0.55rem 0;margin:0 -3.5rem 2rem;padding-left:3.5rem;padding-right:3.5rem;display:flex;align-items:center;gap:0.5rem;">'
-            f'<span style="font-family:Syne,sans-serif;font-size:0.72rem;font-weight:700;color:{_sc};padding:0.25rem 0.6rem;border-radius:4px;background:#0A0D14;border:1px solid #0F1825;margin-right:0.3rem;">{_s}/100</span>'
-            f'<span style="color:#0C1118;margin:0 0.15rem;">|</span>'
-            f'<a href="#o-arch" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;">Architecture</a>'
-            f'<a href="#o-inv" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;">Inventory</a>'
-            f'<a href="#o-mig" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;">Migration</a>'
+            f'<div style="{_wrap}">'
+            f'<span style="font-family:Syne,sans-serif;font-size:0.72rem;font-weight:800;color:{_sc};padding:0.25rem 0.7rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;margin-right:0.4rem;">{_s}/100</span>'
+            f'<span style="color:#0C1118;margin:0 0.15rem;">│</span>'
+            f'<a href="#o-arch" style="{_btn_m}">Architecture</a>'
+            f'<a href="#o-inv" style="{_btn_m}">Inventory</a>'
+            f'<a href="#o-mig" style="{_btn_m}">Migration</a>'
             f'<span style="flex:1;"></span>'
-            f'<a href="#o-export" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#00D4AA;letter-spacing:0.08em;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #00D4AA20;background:#00D4AA08;text-decoration:none;">↓ Export</a>'
+            f'<a href="#o-export" style="{_btn_a}">↓ Export</a>'
             f'</div>',
             unsafe_allow_html=True)
         st.markdown('<div id="o-export"></div>', unsafe_allow_html=True)
@@ -2668,13 +2654,16 @@ else:
                     key=lambda x: x.get('score',0), reverse=True)
 
         # Sticky nav portfolio
+        _btn_m = "display:inline-block;font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.85rem;border-radius:5px;border:1px solid #162030;background:#0A0D14;text-decoration:none;cursor:pointer;white-space:nowrap;color:#3A5570;"
+        _btn_a = "display:inline-block;font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.85rem;border-radius:5px;border:1px solid #00D4AA25;background:#00D4AA0A;text-decoration:none;cursor:pointer;white-space:nowrap;color:#00D4AA;"
+        _wrap  = "position:sticky;top:0;z-index:100;background:rgba(6,8,12,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid #0C1118;padding:0.5rem 3.5rem;margin:0 -3.5rem 2rem;display:flex;align-items:center;gap:0.4rem;"
         st.markdown(
-            '<div style="position:sticky;top:0;z-index:100;background:#06080Cee;backdrop-filter:blur(12px);border-bottom:1px solid #0C1118;padding:0.55rem 0;margin:0 -3.5rem 2rem;padding-left:3m;padding-right:3.5rem;display:flex;align-items:center;gap:0.5rem;">'
-            '<a href="#o-psummary" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;color:#00D4AA;border-color:#00D4AA20;background:#00D4AA08;">Summary</a>'
-            '<a href="#o-pmap" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;">Intelligence Map</a>'
-            '<a href="#o-plist" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#4A6080;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;text-decoration:none;transition:all 0.15s;white-spaowrap;">Flow List</a>'
+            f'<div style="{_wrap}">'
+            '<a href="#o-psummary" style="' + _btn_a + '">Summary</a>'
+            '<a href="#o-pmap" style="' + _btn_m + '">Intelligence Map</a>'
+            '<a href="#o-plist" style="' + _btn_m + '">Flow List</a>'
             '<span style="flex:1;"></span>'
-            '<a href="#o-pexport" style="font-family:DM Mono,monospace;font-size:0.58rem;color:#00D4AA;letter-spacing:0.08em;padding:0.28rem 0.8rem;border-radius:5px;border:1px solid #00D4AA20;background:#00D4AA08;text-decoration:none;">↓ Export</a>'
+            '<a href="#o-pexport" style="' + _btn_a + '">↓ Export</a>'
             '</div>',
             unsafe_allow_html=True)
         st.markdown('<div id="o-psummary" class="o-anchor"></div>', unsafe_allow_html=True)
