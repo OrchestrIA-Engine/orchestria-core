@@ -1,17 +1,9 @@
-import os
 import anthropic
 from .base import LLMAdapter, Message, LLMConfig, LLMResponse
 
 class AnthropicAdapter(LLMAdapter):
     def __init__(self, api_key: str = None):
-        if not api_key:
-            api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            try:
-                import streamlit as st
-                api_key = st.secrets.get("ANTHROPIC_API_KEY")
-            except Exception:
-                pass
+        # El SDK lee ANTHROPIC_API_KEY del entorno automaticamente si api_key=None
         self.client = anthropic.Anthropic(api_key=api_key)
 
     def complete(self, messages: list[Message], config: LLMConfig) -> LLMResponse:
