@@ -1294,14 +1294,6 @@ def ivr_loading_panel(current: int, total: int, current_name: str = "", phases: 
 
 '''
 
-with open('/home/claude/neural_pulse.py', 'w') as f:
-    f.write(NEW_LOADING)
-
-# Verificar sintaxis
-import ast
-ast.parse(NEW_LOADING)
-print(f'OK — {len(NEW_LOADING)} chars, sintaxis limpia')
-
 def generar_portfolio_pdf(results, flows_map) -> bytes:
     """PDF consolidado: portada portfolio + 1 página por flujo."""
     import io, json, re, os
