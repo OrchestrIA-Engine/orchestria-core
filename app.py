@@ -505,6 +505,7 @@ def generar_pdf_bytes(flow, analysis):
     os.unlink(path); return data
 
 
+# ── COLOR CONSTANTS ─────────────────────────────────────────────────────────
 BG="07080B"; SURFACE="0E1118"; CARD="161B22"; BORDER="1C2030"
 TEXT="E8EDF5"; DIM="4B5568"; WHITE="FFFFFF"
 TEAL="00D4AA"; RED="F85149"; YELLOW="D29922"; ORANGE="F0883E"
@@ -990,159 +991,316 @@ def generar_portfolio_excel_v2(results, raw_yamls=None):
 
 
 
+NEW_LOADING = '''
 def ivr_loading_panel(current: int, total: int, current_name: str = "", phases: list = None) -> str:
     """
-    Apple-level IVR graph loading animation.
-    SVG with internal animations — nodes pulse, edges draw, graph expands.
+    Neural Pulse Graph — Apple/Vercel level loading animation.
+    SVG con animaciones nativas CSS: materialización, pulso cardíaco,
+    partículas viajando por edges, sweep line.
     """
     pct = int((current / max(total, 1)) * 100) if total > 1 else min(current * 22, 95)
+    lit = max(2, int(11 * max(pct, 15) / 100))
+    cur = lit - 1
+    fname_short = current_name.replace(".yaml","").replace(".yml","")[:36]
+    pct_str = str(pct)
 
-    # Full node architecture — progressive reveal based on pct
-    ALL_NODES = [
-        # id, cx, cy, type, label, r
-        ("n0",  170,  22, "entry", "ENTRY",    8),
-        ("n1",   80,  55, "auth",  "AUTH",     7),
-        ("n2",  260,  55, "menu",  "MENU",     7),
-        ("n3",   30,  95, "api",   "API",      6),
-        ("n4",  110,  95, "task",  "TASK",     6),
-        ("n5",  210,  95, "cond",  "COND",     6),
-        ("n6",  300,  95, "xfer",  "XFER",     6),
-        ("n7",   65, 135, "exit",  "EXIT",     5),
-        ("n8",  170, 135, "exit",  "EXIT",     5),
-        ("n9",  285, 135, "exit",  "EXIT",     5),
-        ("n10", 170, 162, "tts",   "TTS",      5),
+    # ── NODE TOPOLOGY ──────────────────────────────────────────────────────
+    # Posiciones absolutas en viewBox 340x200
+    NODES = [
+        ("n0",  170,  22, "entry", "ENTRY"),
+        ("n1",   75,  60, "auth",  "AUTH"),
+        ("n2",  265,  60, "menu",  "MENU"),
+        ("n3",   28,  105, "api",  "API"),
+        ("n4",  115,  105, "task", "TASK"),
+        ("n5",  210,  105, "cond", "COND"),
+        ("n6",  305,  105, "xfer", "XFER"),
+        ("n7",   65,  150, "exit", "EXIT"),
+        ("n8",  170,  150, "exit", "EXIT"),
+        ("n9",  285,  150, "exit", "EXIT"),
+        ("n10", 170,  182, "tts",  "TTS"),
     ]
-    ALL_EDGES = [
-        ("n0","n1"), ("n0","n2"),
-        ("n1","n3"), ("n1","n4"),
-        ("n2","n5"), ("n2","n6"),
-        ("n3","n7"), ("n4","n7"),
-        ("n5","n8"), ("n6","n9"),
-        ("n7","n10"),("n8","n10"),("n9","n10"),
+    EDGES = [
+        (0,1),(0,2),(1,3),(1,4),(2,5),(2,6),
+        (3,7),(4,7),(5,8),(6,9),(7,10),(8,10),(9,10)
     ]
     TYPE_COLOR = {
-        "entry": "#00D4AA",
-        "auth":  "#F85149",
-        "menu":  "#0090FF",
-        "api":   "#F0883E",
-        "task":  "#9B72F5",
-        "cond":  "#D29922",
-        "xfer":  "#00D4AA",
-        "exit":  "#3A4A61",
-        "tts":   "#3FB950",
+        "entry":"00D4AA","auth":"F85149","menu":"0090FF",
+        "api":"F0883E","task":"9B72F5","cond":"D29922",
+        "xfer":"00D4AA","exit":"2A3650","tts":"3FB950",
     }
 
-    lit = max(2, int(len(ALL_NODES) * max(pct, 15) / 100))
-    cur = lit - 1
-
-    # Build SVG
-    W, H = 340, 185
-
-    # Defs — glow filters per color
+    # ── DEFS ───────────────────────────────────────────────────────────────
+    # Glow filters + gradient + particle marker
     defs = '<defs>'
-    for ntype, col in TYPE_COLOR.items():
-        col_hex = col.replace('#','')
-        defs += (
-            f'<filter id="glow-{ntype}" x="-50%" y="-50%" width="200%" height="200%">'            f'<feGaussianBlur stdDeviation="3" result="blur"/>'            f'<feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>'            f'</filter>'
-        )
-    defs += '</defs>'
 
-    # Edges
-    svg_edges = ""
-    for (a, b) in ALL_EDGES:
-        n1 = next(n for n in ALL_NODES if n[0]==a)
-        n2 = next(n for n in ALL_NODES if n[0]==b)
-        x1, y1 = n1[1], n1[2]
-        x2, y2 = n2[1], n2[2]
-        i1 = next(i for i,n in enumerate(ALL_NODES) if n[0]==a)
-        i2 = next(i for i,n in enumerate(ALL_NODES) if n[0]==b)
-        active = i1 < lit and i2 < lit
-        col = TYPE_COLOR.get(n2[3], "#2A3650")
-
-        if active:
-            # Animated dash-draw effect on active edges
-            length = ((x2-x1)**2 + (y2-y1)**2)**0.5
-            svg_edges += (
-                f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" '                f'stroke="{col}" stroke-width="1" opacity="0.6" '                f'stroke-dasharray="{length:.0f}" stroke-dashoffset="0">'                f'</line>'
-            )
-        else:
-            svg_edges += (
-                f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" '                f'stroke="#0D1320" stroke-width="0.75" opacity="1"/>'            )
-
-    # Nodes
-    svg_nodes = ""
-    for i, (nid, cx, cy, ntype, label, r) in enumerate(ALL_NODES):
-        col = TYPE_COLOR.get(ntype, "#2A3650")
-        is_lit = i < lit
-        is_cur = i == cur
-
-        if not is_lit:
-            # Unvisited — ghost
-            svg_nodes += (
-                f'<circle cx="{cx}" cy="{cy}" r="{r}" '                f'fill="#0C0F16" stroke="#0D1320" stroke-width="0.75"/>'                f'<text x="{cx}" y="{cy+r+9}" text-anchor="middle" '                f'fill="#161D2B" font-family="DM Mono,monospace" '                f'font-size="5" letter-spacing="0.05em">{label}</text>'
-            )
-        elif is_cur:
-            # Current — full glow + pulse animation
-            svg_nodes += (
-                # Outer pulse ring
-                f'<circle cx="{cx}" cy="{cy}" r="{r+6}" '                f'fill="none" stroke="{col}" stroke-width="1" opacity="0.15">'                f'<animate attributeName="r" values="{r+6};{r+14};{r+6}" '                f'dur="1.4s" repeatCount="indefinite"/>'                f'<animate attributeName="opacity" values="0.15;0;0.15" '                f'dur="1.4s" repeatCount="indefinite"/>'                f'</circle>'                # Middle ring
-                f'<circle cx="{cx}" cy="{cy}" r="{r+2}" '                f'fill="none" stroke="{col}" stroke-width="0.75" opacity="0.3">'                f'<animate attributeName="r" values="{r+2};{r+6};{r+2}" '                f'dur="1.4s" repeatCount="indefinite"/>'                f'<animate attributeName="opacity" values="0.3;0;0.3" '                f'dur="1.4s" repeatCount="indefinite"/>'                f'</circle>'                # Core node with glow filter
-                f'<circle cx="{cx}" cy="{cy}" r="{r}" '                f'fill="{col}" filter="url(#glow-{ntype})"/>'                # Inner highlight
-                f'<circle cx="{cx-1}" cy="{cy-1}" r="{max(1,r-3)}" '                f'fill="white" opacity="0.15"/>'                f'<text x="{cx}" y="{cy+r+9}" text-anchor="middle" '                f'fill="{col}" font-family="DM Mono,monospace" '                f'font-size="5.5" font-weight="600" '                f'letter-spacing="0.05em" opacity="1">{label}</text>'
-            )
-        else:
-            # Visited — solid, subtle
-            svg_nodes += (
-                f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{col}" opacity="0.85"/>'                f'<circle cx="{cx-1}" cy="{cy-1}" r="{max(1,r-3)}" '                f'fill="white" opacity="0.1"/>'                f'<text x="{cx}" y="{cy+r+9}" text-anchor="middle" '                f'fill="{col}" font-family="DM Mono,monospace" '                f'font-size="5" letter-spacing="0.05em" opacity="0.7">{label}</text>'
+    # Radial gradient per active node
+    for i,(nid,cx,cy,ntype,_) in enumerate(NODES):
+        col = TYPE_COLOR.get(ntype,"2A3650")
+        if i < lit:
+            defs += (
+                f'<radialGradient id="rg{i}" cx="35%" cy="30%" r="65%">'
+                f'<stop offset="0%" stop-color="#{col}" stop-opacity="0.9"/>'
+                f'<stop offset="100%" stop-color="#{col}" stop-opacity="0.4"/>'
+                f'</radialGradient>'
             )
 
-    # Scanning line animation (horizontal sweep)
-    scan_line = (
-        '<line x1="0" y1="0" x2="340" y2="0" '        'stroke="#00D4AA" stroke-width="0.5" opacity="0.08">'        '<animateTransform attributeName="transform" type="translate" '        'values="0,0;0,185;0,0" dur="3s" repeatCount="indefinite"/>'        '</line>'
+    # Glow filter
+    defs += (
+        '<filter id="glow" x="-60%" y="-60%" width="220%" height="220%">'
+        '<feGaussianBlur stdDeviation="3.5" result="b"/>'
+        '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>'
+        '</filter>'
+        '<filter id="glow-sm" x="-40%" y="-40%" width="180%" height="180%">'
+        '<feGaussianBlur stdDeviation="1.5" result="b"/>'
+        '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>'
+        '</filter>'
     )
 
-    # Phases panel
+    # Arrow marker
+    defs += (
+        '<marker id="arr" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">'
+        '<path d="M0,0.5 L4.5,2.5 L0,4.5 Z" fill="#1A2840"/>'
+        '</marker>'
+        '<marker id="arr-active" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">'
+        '<path d="M0,0.5 L4.5,2.5 L0,4.5 Z" fill="#00D4AA" opacity="0.5"/>'
+        '</marker>'
+    )
+    defs += '</defs>'
+
+    # ── CSS ANIMATIONS ────────────────────────────────────────────────────
+    css = '<style>'
+    # Materialize animation per node
+    for i in range(len(NODES)):
+        delay = i * 0.12
+        css += (
+            f'.n{i}-enter {{ animation: materialize 0.4s {delay:.2f}s ease-out both; }}'
+        )
+    css += (
+        '@keyframes materialize {'
+        'from { opacity:0; transform-origin:50% 50%; transform:scale(0.4); }'
+        'to   { opacity:1; transform-origin:50% 50%; transform:scale(1); }'
+        '}'
+        # Heartbeat pulse for current node
+        '@keyframes heartbeat {'
+        '0%   { transform-origin:50% 50%; transform:scale(1);    opacity:1; }'
+        '14%  { transform-origin:50% 50%; transform:scale(1.35); opacity:0.9; }'
+        '28%  { transform-origin:50% 50%; transform:scale(1);    opacity:1; }'
+        '42%  { transform-origin:50% 50%; transform:scale(1.2);  opacity:0.85; }'
+        '70%  { transform-origin:50% 50%; transform:scale(1);    opacity:1; }'
+        '100% { transform-origin:50% 50%; transform:scale(1);    opacity:1; }'
+        '}'
+        # Outer ring expand
+        '@keyframes ring-expand {'
+        'from { r:8; opacity:0.4; }'
+        'to   { r:22; opacity:0; }'
+        '}'
+        # Edge draw
+        '@keyframes edge-draw {'
+        'from { stroke-dashoffset:1; }'
+        'to   { stroke-dashoffset:0; }'
+        '}'
+        # Particle travel
+        '@keyframes travel0 { 0%{offset-distance:0%} 100%{offset-distance:100%} }'
+        # Scan line
+        '@keyframes scan {'
+        '0%   { transform:translateY(0); opacity:0.06; }'
+        '50%  { opacity:0.04; }'
+        '100% { transform:translateY(200px); opacity:0; }'
+        '}'
+        # Idle glow pulse
+        '@keyframes idle-pulse {'
+        '0%,100% { opacity:0.7; } 50% { opacity:1; }'
+        '}'
+    )
+    css += '</style>'
+
+    # ── BACKGROUND ────────────────────────────────────────────────────────
+    bg = (
+        '<rect width="340" height="200" fill="#06080C"/>'
+        # Subtle grid
+        + ''.join([
+            f'<line x1="{x}" y1="0" x2="{x}" y2="200" stroke="#0A0E14" stroke-width="0.5"/>'
+            for x in range(0, 341, 34)
+        ])
+        + ''.join([
+            f'<line x1="0" y1="{y}" x2="340" y2="{y}" stroke="#0A0E14" stroke-width="0.5"/>'
+            for y in range(0, 201, 20)
+        ])
+        # Scan line
+        + '<line x1="0" y1="0" x2="340" y2="0" stroke="#00D4AA" stroke-width="1" opacity="0">'
+        + '<animateTransform attributeName="transform" type="translate" values="0,0;0,200" dur="2.5s" repeatCount="indefinite"/>'
+        + '<animate attributeName="opacity" values="0;0.06;0.04;0" dur="2.5s" repeatCount="indefinite"/>'
+        + '</line>'
+    )
+
+    # ── EDGES ─────────────────────────────────────────────────────────────
+    svg_edges = ""
+    for (a, b) in EDGES:
+        na = NODES[a]; nb = NODES[b]
+        x1,y1 = na[1], na[2]
+        x2,y2 = nb[1], nb[2]
+        active = a < lit and b < lit
+        col = TYPE_COLOR.get(nb[3], "2A3650")
+        dx = x2-x1; dy = y2-y1
+        length = (dx**2 + dy**2)**0.5
+
+        if active:
+            # Edge with draw animation
+            delay_e = max(a,b) * 0.12 + 0.1
+            svg_edges += (
+                f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" '
+                f'stroke="#{col}" stroke-width="1" opacity="0.45" '
+                f'stroke-dasharray="{length:.0f}" stroke-dashoffset="{length:.0f}" '
+                f'marker-end="url(#arr-active)">'
+                f'<animate attributeName="stroke-dashoffset" from="{length:.0f}" to="0" '
+                f'dur="0.5s" begin="{delay_e:.2f}s" fill="freeze"/>'
+                f'</line>'
+            )
+            # Particle traveling along edge
+            if a < cur:
+                pdur = 1.2 + (a % 3) * 0.3
+                pdelay = (a % 4) * 0.4
+                svg_edges += (
+                    f'<circle r="1.5" fill="#{col}" opacity="0.7">'
+                    f'<animateMotion dur="{pdur}s" begin="{pdelay}s" repeatCount="indefinite">'
+                    f'<mpath href="#path-{a}-{b}"/>'
+                    f'</animateMotion>'
+                    f'</circle>'
+                    f'<path id="path-{a}-{b}" d="M{x1},{y1} L{x2},{y2}" fill="none" stroke="none"/>'
+                )
+        else:
+            svg_edges += (
+                f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" '
+                f'stroke="#0D1520" stroke-width="0.75" marker-end="url(#arr)"/>'
+            )
+
+    # ── NODES ─────────────────────────────────────────────────────────────
+    svg_nodes = ""
+    for i, (nid, cx, cy, ntype, label) in enumerate(NODES):
+        col = TYPE_COLOR.get(ntype, "2A3650")
+        is_lit = i < lit
+        is_cur = i == cur
+        r = 8 if ntype == "entry" else 6
+
+        if not is_lit:
+            # Ghost node
+            svg_nodes += (
+                f'<circle cx="{cx}" cy="{cy}" r="{r}" '
+                f'fill="#0A0E16" stroke="#0D1828" stroke-width="0.75" opacity="0.5"/>'
+                f'<text x="{cx}" y="{cy+r+9}" text-anchor="middle" '
+                f'fill="#0D1828" font-family="DM Mono,monospace" font-size="5.5">{label}</text>'
+            )
+        elif is_cur:
+            # Active node — heartbeat + rings
+            svg_nodes += (
+                # Outer ring pulse
+                f'<circle cx="{cx}" cy="{cy}" r="{r+4}" '
+                f'fill="none" stroke="#{col}" stroke-width="0.75" opacity="0">'
+                f'<animate attributeName="r" values="{r+4};{r+18}" dur="1.2s" repeatCount="indefinite"/>'
+                f'<animate attributeName="opacity" values="0.35;0" dur="1.2s" repeatCount="indefinite"/>'
+                f'</circle>'
+                # Mid ring
+                f'<circle cx="{cx}" cy="{cy}" r="{r+2}" '
+                f'fill="none" stroke="#{col}" stroke-width="0.75" opacity="0">'
+                f'<animate attributeName="r" values="{r+2};{r+10}" dur="1.2s" begin="0.2s" repeatCount="indefinite"/>'
+                f'<animate attributeName="opacity" values="0.5;0" dur="1.2s" begin="0.2s" repeatCount="indefinite"/>'
+                f'</circle>'
+                # Core with heartbeat
+                f'<circle cx="{cx}" cy="{cy}" r="{r}" '
+                f'fill="url(#rg{i})" filter="url(#glow)" class="n{i}-enter">'
+                f'<animate attributeName="r" values="{r};{r*1.3};{r};{r*1.15};{r}" '
+                f'dur="1.4s" repeatCount="indefinite"/>'
+                f'</circle>'
+                # Highlight
+                f'<circle cx="{cx-1}" cy="{cy-1}" r="{max(2,r-3)}" '
+                f'fill="white" opacity="0.2" class="n{i}-enter"/>'
+                # Label
+                f'<text x="{cx}" y="{cy+r+9}" text-anchor="middle" '
+                f'fill="#{col}" font-family="DM Mono,monospace" font-size="5.5" '
+                f'font-weight="600" letter-spacing="0.05em" opacity="0.9">{label}</text>'
+            )
+        else:
+            # Visited node — solid, idle pulse
+            svg_nodes += (
+                f'<circle cx="{cx}" cy="{cy}" r="{r}" '
+                f'fill="url(#rg{i})" filter="url(#glow-sm)" class="n{i}-enter">'
+                f'<animate attributeName="opacity" values="0.75;1;0.75" '
+                f'dur="{1.8 + i*0.1:.1f}s" repeatCount="indefinite"/>'
+                f'</circle>'
+                f'<circle cx="{cx-1}" cy="{cy-1}" r="{max(1,r-3)}" '
+                f'fill="white" opacity="0.12" class="n{i}-enter"/>'
+                f'<text x="{cx}" y="{cy+r+9}" text-anchor="middle" '
+                f'fill="#{col}" font-family="DM Mono,monospace" font-size="5.5" '
+                f'letter-spacing="0.04em" opacity="0.65">{label}</text>'
+            )
+
+    # ── PHASES ────────────────────────────────────────────────────────────
     phases_html = ""
     if phases:
         for idx, ph in enumerate(phases):
             if idx < current:
-                dot = '<span style="color:#2A3650;font-size:0.55rem;margin-right:0.5rem;">✓</span>'
-                style = "color:#2A3650;"
+                dot = f'<span style="color:#1A2840;font-size:0.55rem;margin-right:0.5rem;font-family:DM Mono,monospace;">✓</span>'
+                style = "color:#1A2840;"
             elif idx == current:
-                dot = '<span style="color:#00D4AA;font-size:0.5rem;margin-right:0.5rem;">▶</span>'
-                style = "color:#CDD5E0;font-weight:500;"
+                dot = f'<span style="color:#00D4AA;font-size:0.5rem;margin-right:0.5rem;">▶</span>'
+                style = "color:#C8D3E0;font-weight:500;"
             else:
-                dot = '<span style="color:#0D1320;margin-right:0.5rem;">·</span>'
-                style = "color:#111820;"
+                dot = f'<span style="color:#0A0E16;margin-right:0.5rem;">·</span>'
+                style = "color:#0A0E16;"
             phases_html += (
-                f'<div style="font-family:DM Mono,monospace;font-size:0.65rem;'                f'{style}padding:4px 0;border-bottom:1px solid #0A0D14;'                f'display:flex;align-items:center;">{dot}{ph}</div>'
+                f'<div style="font-family:DM Mono,monospace;font-size:0.65rem;{style}'
+                f'padding:3px 0;border-bottom:1px solid #080C12;'
+                f'display:flex;align-items:center;">{dot}{ph}</div>'
             )
 
     counter_html = (
-        f'<span style="font-family:Syne,sans-serif;font-size:1rem;'        f'font-weight:800;color:#00D4AA;letter-spacing:-0.02em;">{current}/{total}</span>'
+        f'<span style="font-family:Syne,sans-serif;font-size:0.9rem;'
+        f'font-weight:800;color:#00D4AA;letter-spacing:-0.02em;">{current}/{total}</span>'
     ) if total > 1 else (
-        '<span style="font-family:DM Mono,monospace;font-size:0.58rem;'        'color:#2A3650;letter-spacing:0.12em;text-transform:uppercase;">analyzing</span>'
+        '<span style="font-family:DM Mono,monospace;font-size:0.55rem;'
+        'color:#1A2840;letter-spacing:0.14em;text-transform:uppercase;">analyzing</span>'
     )
-
-    fname_short = current_name.replace(".yaml","").replace(".yml","")[:38]
-    pct_str = str(pct)
 
     return (
-        '<div style="background:#0A0C12;border:1px solid #0F1520;'        'border-radius:12px;padding:1.1rem 1.25rem;overflow:hidden;">'
-        # Header row
-        '<div style="display:flex;justify-content:space-between;'        'align-items:center;margin-bottom:0.75rem;">'        '<span style="font-family:DM Mono,monospace;font-size:0.56rem;'        'color:#1E2840;letter-spacing:0.14em;text-transform:uppercase;">Flow Analysis</span>'        + counter_html +
+        '<div style="background:#06080C;border:1px solid #0C1118;'
+        'border-radius:12px;padding:1rem 1.2rem;overflow:hidden;">'
+        # Header
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">'
+        '<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#1A2840;'
+        'letter-spacing:0.14em;text-transform:uppercase;">Flow Analysis</span>'
+        + counter_html +
         '</div>'
         # SVG Graph
-        + f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '          f'style="width:100%;height:{H//2+10}px;display:block;margin-bottom:0.6rem;">'          + defs + scan_line + svg_edges + svg_nodes +
-          '</svg>'
-
+        f'<svg viewBox="0 0 340 200" xmlns="http://www.w3.org/2000/svg" '
+        f'style="width:100%;height:115px;display:block;margin-bottom:0.5rem;">'
+        + css + defs + bg + svg_edges + svg_nodes +
+        '</svg>'
         # Phases
-        + ('<div style="margin-bottom:0.6rem;">' + phases_html + '</div>' if phases_html else "")
-
+        + ('<div style="margin-bottom:0.5rem;">' + phases_html + '</div>' if phases_html else "")
         # Progress bar
-        + '<div style="display:flex;justify-content:space-between;'        'align-items:center;font-family:DM Mono,monospace;font-size:0.58rem;'        'color:#2A3650;margin-bottom:4px;">'        '<span style="color:#3A4A61;overflow:hidden;text-overflow:ellipsis;'        'white-space:nowrap;max-width:80%;">' + fname_short + '</span>'        '<span style="color:#00D4AA;font-weight:500;">' + pct_str + '%</span>'        '</div>'        '<div style="background:#080A0F;border-radius:1px;height:1.5px;overflow:hidden;">'        '<div style="background:linear-gradient(90deg,#00D4AA 0%,#0090FF 60%,#9B72F5 100%);'        'height:100%;width:' + pct_str + '%;border-radius:1px;'        'transition:width 0.4s cubic-bezier(0.4,0,0.2,1);"></div>'        '</div>'        '</div>'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;'
+        'font-family:DM Mono,monospace;font-size:0.58rem;margin-bottom:3px;">'
+        '<span style="color:#2A3E56;overflow:hidden;text-overflow:ellipsis;'
+        'white-space:nowrap;max-width:80%;">' + fname_short + '</span>'
+        '<span style="color:#00D4AA;font-weight:500;">' + pct_str + '%</span>'
+        '</div>'
+        '<div style="background:#080A0F;border-radius:1px;height:1.5px;overflow:hidden;">'
+        '<div style="background:linear-gradient(90deg,#00D4AA 0%,#0090FF 50%,#9B72F5 100%);'
+        'height:100%;width:' + pct_str + '%;border-radius:1px;'
+        'transition:width 0.4s cubic-bezier(0.4,0,0.2,1);"></div>'
+        '</div>'
+        '</div>'
     )
 
+'''
+
+with open('/home/claude/neural_pulse.py', 'w') as f:
+    f.write(NEW_LOADING)
+
+# Verificar sintaxis
+import ast
+ast.parse(NEW_LOADING)
+print(f'OK — {len(NEW_LOADING)} chars, sintaxis limpia')
 
 def generar_portfolio_pdf(results, flows_map) -> bytes:
     """PDF consolidado: portada portfolio + 1 página por flujo."""
