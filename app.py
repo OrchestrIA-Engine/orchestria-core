@@ -2540,18 +2540,20 @@ if modo == 'Individual Flow':
         # Sticky nav
         _s = st.session_state.analysis.get('score', 0)
         _sc = '#00D4AA' if _s >= 70 else '#D29922' if _s >= 40 else '#F85149'
-        _btn_m = "display:inline-block;font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.85rem;border-radius:5px;border:1px solid #162030;background:#0A0D14;text-decoration:none;cursor:pointer;white-space:nowrap;color:#3A5570;"
-        _btn_a = "display:inline-block;font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.85rem;border-radius:5px;border:1px solid #00D4AA25;background:#00D4AA0A;text-decoration:none;cursor:pointer;white-space:nowrap;color:#00D4AA;"
-        _wrap  = "position:sticky;top:0;z-index:100;background:rgba(6,8,12,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid #0C1118;padding:0.5rem 3.5rem;margin:0 -3.5rem 2rem;display:flex;align-items:center;gap:0.4rem;"
+        _WRAP    = "position:sticky;top:0;z-index:100;background:rgba(6,8,12,0.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid #0D1520;padding:0.6rem 3.5rem;margin:0 -3.5rem 2.5rem;display:flex;align-items:center;gap:0.35rem;box-shadow:0 1px 0 #0D1520, 0 4px 20px rgba(0,0,0,0.4);"
+        _SPILL   = "display:inline-block;font-family:'DM Mono',monospace;font-size:0.6rem;color:#3A5570;letter-spacing:0.08em;text-transform:uppercase;padding:0.32rem 0.9rem;border-radius:20px;border:1px solid #0D1828;background:#0A0E16;text-decoration:none;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;font-weight:500;"
+        _XBTN    = "display:inline-flex;align-items:center;gap:0.4rem;font-family:'Plus Jakarta Sans',sans-serif;font-size:0.75rem;color:#050810;font-weight:700;letter-spacing:0.01em;padding:0.38rem 1.1rem;border-radius:6px;border:none;background:#00D4AA;text-decoration:none;cursor:pointer;white-space:nowrap;box-shadow:0 2px 12px rgba(0,212,170,0.25);transition:all 0.15s ease;"
+        _SCPILL  = "font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:800;padding:0.28rem 0.75rem;border-radius:20px;border:1px solid #0D1828;background:#0A0E16;margin-right:0.6rem;letter-spacing:-0.01em;"
+        _SEP     = "width:1px;height:16px;background:#0D1828;margin:0 0.5rem;flex-shrink:0;"
         st.markdown(
-            f'<div style="{_wrap}">'
-            f'<span style="font-family:Syne,sans-serif;font-size:0.72rem;font-weight:800;color:{_sc};padding:0.25rem 0.7rem;border-radius:5px;border:1px solid #0F1825;background:#0A0D14;margin-right:0.4rem;">{_s}/100</span>'
-            f'<span style="color:#0C1118;margin:0 0.15rem;">│</span>'
-            f'<a href="#o-arch" style="{_btn_m}">Architecture</a>'
-            f'<a href="#o-inv" style="{_btn_m}">Inventory</a>'
-            f'<a href="#o-mig" style="{_btn_m}">Migration</a>'
+            f'<div style="{_WRAP}">'
+            f'<span style="{_SCPILL}color:{_sc};">{_s}/100</span>'
+            f'<div style="{_SEP}"></div>'
+            f'<a href="#o-arch" style="{_SPILL}">Architecture</a>'
+            f'<a href="#o-inv" style="{_SPILL}">Inventory</a>'
+            f'<a href="#o-mig" style="{_SPILL}">Migration</a>'
             f'<span style="flex:1;"></span>'
-            f'<a href="#o-export" style="{_btn_a}">↓ Export</a>'
+            f'<a href="#o-export" style="{_XBTN}">↓ Export Report</a>'
             f'</div>',
             unsafe_allow_html=True)
         st.markdown('<div id="o-export"></div>', unsafe_allow_html=True)
@@ -2654,16 +2656,16 @@ else:
                     key=lambda x: x.get('score',0), reverse=True)
 
         # Sticky nav portfolio
-        _btn_m = "display:inline-block;font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.85rem;border-radius:5px;border:1px solid #162030;background:#0A0D14;text-decoration:none;cursor:pointer;white-space:nowrap;color:#3A5570;"
-        _btn_a = "display:inline-block;font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.28rem 0.85rem;border-radius:5px;border:1px solid #00D4AA25;background:#00D4AA0A;text-decoration:none;cursor:pointer;white-space:nowrap;color:#00D4AA;"
-        _wrap  = "position:sticky;top:0;z-index:100;background:rgba(6,8,12,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid #0C1118;padding:0.5rem 3.5rem;margin:0 -3.5rem 2rem;display:flex;align-items:center;gap:0.4rem;"
+        _WRAP2   = "position:sticky;top:0;z-index:100;background:rgba(6,8,12,0.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid #0D1520;padding:0.6rem 3.5rem;margin:0 -3.5rem 2.5rem;display:flex;align-items:center;gap:0.35rem;box-shadow:0 1px 0 #0D1520, 0 4px 20px rgba(0,0,0,0.4);"
+        _SPILL2  = "display:inline-block;font-family:'DM Mono',monospace;font-size:0.6rem;color:#3A5570;letter-spacing:0.08em;text-transform:uppercase;padding:0.32rem 0.9rem;border-radius:20px;border:1px solid #0D1828;background:#0A0E16;text-decoration:none;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;font-weight:500;"
+        _XBTN2   = "display:inline-flex;align-items:center;gap:0.4rem;font-family:'Plus Jakarta Sans',sans-serif;font-size:0.75rem;color:#050810;font-weight:700;letter-spacing:0.01em;padding:0.38rem 1.1rem;border-radius:6px;border:none;background:#00D4AA;text-decoration:none;cursor:pointer;white-space:nowrap;box-shadow:0 2px 12px rgba(0,212,170,0.25);transition:all 0.15s ease;"
         st.markdown(
-            f'<div style="{_wrap}">'
-            '<a href="#o-psummary" style="' + _btn_a + '">Summary</a>'
-            '<a href="#o-pmap" style="' + _btn_m + '">Intelligence Map</a>'
-            '<a href="#o-plist" style="' + _btn_m + '">Flow List</a>'
+            f'<div style="{_WRAP2}">'
+            '<a href="#o-psummary" style="' + _SPILL2 + '">Summary</a>'
+            '<a href="#o-pmap" style="' + _SPILL2 + '">Intelligence Map</a>'
+            '<a href="#o-plist" style="' + _SPILL2 + '">Flow List</a>'
             '<span style="flex:1;"></span>'
-            '<a href="#o-pexport" style="' + _btn_a + '">↓ Export</a>'
+            '<a href="#o-pexport" style="' + _XBTN2 + '">↓ Export Report</a>'
             '</div>',
             unsafe_allow_html=True)
         st.markdown('<div id="o-psummary" class="o-anchor"></div>', unsafe_allow_html=True)
