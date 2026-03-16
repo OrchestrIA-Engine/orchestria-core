@@ -5,20 +5,17 @@ from .base import LLMAdapter, Message, LLMConfig, LLMResponse
 class AnthropicAdapter(LLMAdapter):
     def __init__(self, api_key: str = None):
         if not api_key:
-            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
         if not api_key:
             try:
                 import streamlit as st
-                api_key = st.secrets.get("ANTHROPIC_API_KEY")
+                api_key = st.secrets.get("ANTHROPIC_API_KEY", "").strip()
             except Exception:
                 pass
-        if not api_key:
-            raise ValueError("ANTHROPIC_API_KEY not found")
         self.api_key = api_key
         self.client = anthropic.Anthropic(api_key=self.api_key)
 
     def complete(self, messages: list[Message], config: LLMConfig) -> LLMResponse:
-        # Crear cliente fresco en cada llamada para evitar problemas de threading
         client = anthropic.Anthropic(api_key=self.api_key)
         response = client.messages.create(
             model=config.model,
