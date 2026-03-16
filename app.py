@@ -2,6 +2,10 @@ import sys, os
 sys.path.insert(0, os.getcwd())
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import streamlit as st
+import os as _os
+_k = _os.environ.get('ANTHROPIC_API_KEY','')
+print(f'[STARTUP] ANTHROPIC_API_KEY present: {bool(_k)}, prefix: {_k[:12] if _k else "EMPTY"}')
+
 import json, time, tempfile
 from datetime import datetime, date
 from openpyxl import Workbook
