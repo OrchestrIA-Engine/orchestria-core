@@ -2030,6 +2030,134 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
                     + '</div>',
                     unsafe_allow_html=True)
 
+    # EXPORT IMPROVED FLOW — se desbloquea cuando hay propuestas aceptadas
+    ref = st.session_state.get('refactoring')
+    if ref and ref.get('proposals'):
+        accepted = [p for p in ref['proposals'] if p.get('accepted') is True]
+        if accepted:
+            st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+            st.markdown('<span class="o-label">Export Improved Flow</span>', unsafe_allow_html=True)
+
+            n_accepted = len(accepted)
+            n_total    = len(ref['proposals'])
+            delta      = ref.get('score_delta_estimate', 0)
+            new_score  = min(analysis.get('score', 0) + delta, 100)
+
+            st.markdown(
+                '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.82rem;'
+                'color:#4A6080;margin-bottom:1rem;">'
+                + str(n_accepted) + ' of ' + str(n_total) + ' proposals accepted — '
+                'estimated improved score: '
+                '<strong style="color:#00D4AA;">' + str(new_score) + '/100</strong>'
+                '</div>',
+                unsafe_allow_html=True)
+
+            # Construir el YAML mejorado aplicando los proposed_yaml aceptados
+            try:
+                import yaml as _yaml
+                import json as _json
+
+                raw = st.session_state.get('raw_yaml', '')
+                try:
+                    improved_data = _yaml.safe_load(raw)
+                except Exception:
+                    improved_data = _json.loads(raw)
+
+                # Si es un wrapper fixture, trabajar sobre el inner
+                is_wrapper = isinstance(improved_data, dict) and set(improved_data.keys()) <= {'id','name','yaml','expected'}
+                if is_wrapper and 'yaml' in improved_data:
+                    inner = _yaml.safe_load(improved_data['yaml'])
+                else:
+                    inner = improved_data
+
+                # Aplicar cada propuesta aceptada — reconstruir el nodo en la estructura
+                def _all_nodes_dict(data):
+                    result = {}
+                    for section in ['menus','tasks','transfers','nodes','steps','actions']:
+                        raw_s = data.get(section, {})
+                        if isinstance(raw_s, dict):
+                            result[section] = raw_s
+                        elif isinstance(raw_s, list):
+                            result[section] = raw_s
+                    return result
+
+                import copy as _copy
+                improved_inner = _copy.deepcopy(inner)
+
+                for prop in accepted:
+                    node_id = prop.get('node_id','')
+                    try:
+                        fixed_node_full = _yaml.safe_load(prop.get('proposed_yaml',''))
+                        fixed_node = fixed_node_full.get(node_id, fixed_node_full) if isinstance(fixed_node_full, dict) else None
+                        if not fixed_node:
+                            continue
+                    except Exception:
+                        continue
+
+                    # Buscar y reemplazar el nodo en la estructura
+                    for section in ['menus','tasks','transfers','nodes','steps','actions']:
+                        sec = improved_inner.get(section)
+                        if isinstance(sec, dict) and node_id in sec:
+                            improved_inner[section][node_id] = fixed_node
+                        elif isinstance(sec, list):
+                            for idx, item in enumerate(sec):
+                                if isinstance(item, dict) and item.get('id') == node_id:
+                                    improved_inner[section][idx] = {**item, **fixed_node}
+
+                # Reconstruir el wrapper si era fixture
+                if is_wrapper:
+                    final_data = _copy.deepcopy(improved_data)
+                    final_data['yaml'] = _yaml.dump(improved_inner, default_flow_style=False, allow_unicode=True)
+                else:
+                    final_data = improved_inner
+
+                # Generar los tres formatos
+                yaml_out = _yaml.dump(final_data, default_flow_style=False, allow_unicode=True, sort_keys=False)
+                json_out = _json.dumps(final_data, indent=2, ensure_ascii=False)
+
+                try:
+                    import xmltodict as _xmltodict
+                    xml_out = _xmltodict.unparse({'flow': final_data}, pretty=True)
+                except Exception:
+                    xml_out = '<!-- xmltodict not available — install with: pip install xmltodict -->\n' + yaml_out
+
+                flow_name_clean = (getattr(flow, 'flow_name', 'flow') or 'flow').replace(' ', '_').lower()
+
+                col_y, col_j, col_x = st.columns(3)
+                col_y.download_button(
+                    label='↓ Download YAML',
+                    data=yaml_out,
+                    file_name=flow_name_clean + '_improved.yaml',
+                    mime='text/yaml',
+                    key='dl_yaml_' + key_prefix,
+                    use_container_width=True)
+                col_j.download_button(
+                    label='↓ Download JSON',
+                    data=json_out,
+                    file_name=flow_name_clean + '_improved.json',
+                    mime='application/json',
+                    key='dl_json_' + key_prefix,
+                    use_container_width=True)
+                col_x.download_button(
+                    label='↓ Download XML',
+                    data=xml_out,
+                    file_name=flow_name_clean + '_improved.xml',
+                    mime='application/xml',
+                    key='dl_xml_' + key_prefix,
+                    use_container_width=True)
+
+                # Resumen de cambios aplicados
+                st.markdown(
+                    '<div style="font-family:DM Mono,monospace;font-size:0.65rem;'
+                    'color:#1E3050;margin-top:0.75rem;">'
+                    'Changes applied: ' +
+                    ' · '.join([p.get('node_id','') + ' [' + p.get('issue_code','') + ']' for p in accepted]) +
+                    '</div>',
+                    unsafe_allow_html=True)
+
+            except Exception as ex:
+                st.error('Error building improved flow: ' + str(ex))
+
     st.markdown('<div id="o-arch" class="o-anchor"></div>', unsafe_allow_html=True)
     # ── FLOW ARCHITEAPH ───────────────────────────────────────────────
     if flow and flow.nodes:
