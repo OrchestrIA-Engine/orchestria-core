@@ -204,9 +204,9 @@ class DeterministicScorer:
 
         data_services = inv.get("data_services", [])
         api_calls = inv.get("api_calls", 0)
-        if data_services or len(api_calls) > 0:
+        if data_services or api_calls > 0:
             # Penalizar APIs sin fallback (aproximación: si hay APIs y no hay inter_flow_calls de fallback)
-            n_apis = len(data_services) + (1 if len(api_calls) > 3 else 0)
+            n_apis = len(data_services) + (1 if api_calls > 3 else 0)
             p = min(n_apis * PENALTIES["api_without_fallback"], 12)
             if p > 0:
                 penalty += p
@@ -366,7 +366,7 @@ class DeterministicScorer:
         penalty = 0
         issues = []
 
-        if len(inv.get("voicemail_nodes", [])) > 0:
+        if inv.get("voicemail_nodes", 0) > 0:
             p = PENALTIES["voicemail_node"]
             penalty += p
             issues.append({
@@ -377,7 +377,7 @@ class DeterministicScorer:
                 "fix": "Replace with Cloud-native callback or message options",
             })
 
-        if len(inv.get("schedule_nodes", [])) > 0:
+        if inv.get("schedule_nodes", 0) > 0:
             p = PENALTIES["schedule_node"]
             penalty += p
             issues.append({
