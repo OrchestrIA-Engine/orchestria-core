@@ -1892,377 +1892,282 @@ def score_color_hex(s):
 
 
 def mostrar_resultado(analysis, flow=None, key_prefix='main'):
-    """Renderiza el resultado del análisis — Linear/Vercel design system."""
-    score  = analysis.get('score', 0)
-    inv    = analysis.get('inventory', {})
-    issues = analysis.get('critical_issues', [])
-    imps   = analysis.get('improvements', [])
-    summ   = analysis.get('summary', '')
+    """Renderiza el resultado del análisis — Tab layout, no scroll infinito."""
+    score     = analysis.get('score', 0)
+    inv       = analysis.get('inventory', {})
+    issues    = analysis.get('critical_issues', [])
+    imps      = analysis.get('improvements', [])
+    summ      = analysis.get('summary', '')
+    det       = analysis.get('deterministic_breakdown', {})
+    det_issues = analysis.get('deterministic_issues', [])
+    sc        = score_color_hex(score)
 
-    sc = score_color_hex(score)
+    DIM_COLORS = {'D1':'00D4AA','D2':'F0883E','D3':'0090FF','D4':'F85149','D5':'9B72F5','D6':'D29922'}
 
-    # ── SCORE + RESUMEN ────────────────────────────────────────────────────────
-    col_s, col_r = st.columns([1, 2])
-    with col_s:
+    # ── SCORE HEADER — siempre visible encima de los tabs ─────────────────────
+    col_score, col_summary = st.columns([1, 3])
+    with col_score:
         st.markdown(score_ring(score), unsafe_allow_html=True)
-
-    with col_r:
+    with col_summary:
         if summ:
             st.markdown(
-                f'<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.88rem;'                f'color:#6B7E97;line-height:1.75;padding:0.25rem 0 1rem;">{summ}</div>',
+                f'<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.88rem;'
+                f'color:#6B7E97;line-height:1.75;padding:0.5rem 0 0.5rem;">{summ}</div>',
                 unsafe_allow_html=True)
-        for i in issues:
-            st.error(i)
-        for i in imps:
-            st.success(i)
+        # Issues críticos compactos en el header
+        crit = [i for i in det_issues if i.get('severity') in ('CRITICAL','HIGH')]
+        if crit:
+            chips = ''
+            for i in crit[:4]:
+                col_h = DIM_COLORS.get(i.get('dim',''), '4A6080')
+                chips += (f'<span style="font-family:DM Mono,monospace;font-size:0.6rem;'
+                         f'color:#{col_h};border:1px solid #{col_h}20;border-radius:4px;'
+                         f'padding:2px 8px;margin:2px;display:inline-block;">'
+                         f'{i.get("dim","")} −{i.get("penalty",0)}pts</span>')
+            st.markdown(f'<div style="margin-top:0.25rem;">{chips}</div>', unsafe_allow_html=True)
 
-    # ── DETERMINISTIC SCORE BREAKDOWN ──────────────────────────────────────────
-    det = analysis.get('deterministic_breakdown', {})
-    det_issues = analysis.get('deterministic_issues', [])
-    if det:
-        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
-        st.markdown('<span class="o-label">Quality Score Breakdown</span>', unsafe_allow_html=True)
-        DIM_COLORS = {'D1':'00D4AA','D2':'F0883E','D3':'0090FF','D4':'F85149','D5':'9B72F5','D6':'D29922'}
-        cols = st.columns(len(det))
-        for col, (key, dim) in zip(cols, det.items()):
-            col_hex  = DIM_COLORS.get(key, '4A6080')
-            pct_val  = dim.get('pct', 0)
-            earned_v = dim.get('score', 0)
-            maxp_v   = dim.get('max', 0)
-            niss_v   = len(dim.get('issues', []))
-            dname_v  = dim.get('name', '')
-            iss_h    = ('<div style="font-family:DM Mono,monospace;font-size:0.58rem;color:#F85149;margin-top:0.3rem;">' + str(niss_v) + ' issue(s)</div>') if niss_v else ''
-            card_h   = (
-                '<div style="border:1px solid #0C1520;border-radius:8px;padding:0.75rem 0.8rem;">'
-                '<div style="font-family:DM Mono,monospace;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;color:#' + col_hex + ';">' + key + '</div>'
-                '<div style="font-family:Syne,sans-serif;font-size:1.3rem;font-weight:800;line-height:1;color:#' + col_hex + ';">' + str(earned_v) + '<span style="font-size:0.7rem;color:#1E2840;font-family:DM Mono,monospace;">/' + str(maxp_v) + '</span></div>'
-                '<div style="background:#0A0D14;border-radius:1px;height:2px;margin:0.4rem 0;">'
-                '<div style="background:#' + col_hex + ';height:100%;width:' + str(pct_val) + '%;border-radius:1px;"></div></div>'
-                '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.7rem;color:#2A3E56;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + dname_v + '</div>'
-                + iss_h +
-                '</div>'
-            )
-            col.markdown(card_h, unsafe_allow_html=True)
-        if det_issues:
-            st.markdown('<div style="margin-top:1.25rem;"></div>', unsafe_allow_html=True)
-            SEV_COLOR = {'CRITICAL':'F85149','HIGH':'F85149','MEDIUM':'D29922','LOW':'4A6080'}
-            for issue in sorted(det_issues, key=lambda x: {'CRITICAL':0,'HIGH':1,'MEDIUM':2,'LOW':3}.get(x.get('severity','LOW'),4)):
-                sev = issue.get('severity','')
-                sc  = SEV_COLOR.get(sev,'4A6080')
-                dim_key = issue.get('dim','')
-                dim_col = DIM_COLORS.get(dim_key,'4A6080')
-                fix = issue.get('fix','')
-                st.markdown(
-                    f'<div style="border:1px solid #0C1520;border-left:3px solid #{sc};'
-                    f'border-radius:6px;padding:0.6rem 0.85rem;margin-bottom:0.4rem;">'
-                    f'<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.25rem;">'
-                    f'<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#{dim_col};letter-spacing:0.1em;">{dim_key}</span>'
-                    f'<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#{sc};letter-spacing:0.1em;">{sev}</span>'
-                    f'<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#1E2840;">−{issue.get("penalty",0)} pts</span></div>'
-                    f'<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.82rem;color:#8BA0B8;margin-bottom:0.2rem;">{issue.get("message","")}</div>'
-                    + (f'<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:#1E3050;">→ {fix}</div>' if fix else '') +
-                    f'</div>',
-                    unsafe_allow_html=True)
+    st.markdown('<div style="margin-top:1.25rem;"></div>', unsafe_allow_html=True)
 
-    # REFACTORING PROPOSALS
-    det_issues = analysis.get('deterministic_issues', [])
-    fixable = [i for i in det_issues if i.get('code') in ('DEAD_ENDS','MENUS_NO_INPUT_HANDLER','MISSING_FALLBACKS')]
-    if fixable and st.session_state.get('raw_yaml'):
-        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
-        st.markdown('<span class="o-label">Refactoring Proposals</span>', unsafe_allow_html=True)
-        score_gain = sum(i.get('penalty', 0) for i in fixable)
-        cur_score = analysis.get('score', 0)
-        new_score = min(cur_score + score_gain, 100)
-        st.markdown(
-            '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.82rem;'
-            'color:#4A6080;margin-bottom:1rem;">'
-            'OrchestrIA can auto-fix <strong style="color:#C8D3E0;">'
-            + str(len(fixable)) +
-            ' issue(s)</strong> — estimated score improvement: '
-            '<strong style="color:#00D4AA;">'
-            + str(cur_score) + ' → ' + str(new_score) +
-            '/100</strong></div>',
-            unsafe_allow_html=True)
-        if st.button('⚡ Generate Fix Proposals', key='gen_refactor_' + key_prefix):
-            with st.spinner('Generating proposals...'):
-                try:
-                    from src.agents.refactoring_agent import RefactoringAgent
-                    agent = RefactoringAgent()
-                    result = agent.refactor(
-                        yaml_content=st.session_state.raw_yaml,
-                        issues=fixable,
-                        flow_name=getattr(flow, 'flow_name', '') if flow else ''
-                    )
-                    st.session_state.refactoring = result.to_dict()
-                except Exception as ex:
-                    st.error('Error: ' + str(ex))
-        ref = st.session_state.get('refactoring')
-        if ref and ref.get('proposals'):
-            for pi, prop in enumerate(ref['proposals']):
-                sev = prop.get('severity', 'LOW')
-                sev_colors = {'CRITICAL': 'F85149', 'HIGH': 'F85149', 'MEDIUM': 'D29922', 'LOW': '4A6080'}
-                sev_c = sev_colors.get(sev, '4A6080')
-                label = '[' + prop.get('issue_code', '') + '] ' + prop.get('node_id', '') + ' — ' + prop.get('description', '')
-                with st.expander(label[:90]):
-                    st.markdown(
-                        '<div style="font-family:DM Mono,monospace;font-size:0.68rem;'
-                        'color:#8BA0B8;margin-bottom:0.75rem;">'
-                        + prop.get('explanation', '') + '</div>',
-                        unsafe_allow_html=True)
-                    c1, c2 = st.columns(2)
-                    c1.markdown('<span class="o-label">Original</span>', unsafe_allow_html=True)
-                    c1.code(prop.get('original_yaml', ''), language='yaml')
-                    c2.markdown('<span class="o-label">Proposed Fix</span>', unsafe_allow_html=True)
-                    c2.code(prop.get('proposed_yaml', ''), language='yaml')
-                    ca, cr, _ = st.columns([1, 1, 4])
-                    if ca.button('✅ Accept', key='acc_' + key_prefix + '_' + str(pi)):
-                        ref['proposals'][pi]['accepted'] = True
-                        st.success('Accepted')
-                    if cr.button('❌ Reject', key='rej_' + key_prefix + '_' + str(pi)):
-                        ref['proposals'][pi]['accepted'] = False
-                        st.error('Rejected')
-            accepted = [p for p in ref['proposals'] if p.get('accepted') is True]
-            if accepted:
-                st.markdown(
-                    '<div style="font-family:DM Mono,monospace;font-size:0.68rem;'
-                    'color:#00D4AA;margin-top:0.75rem;">'
-                    + str(len(accepted)) + ' proposal(s) accepted — JIRA Epic Generator coming in Sprint 12'
-                    + '</div>',
-                    unsafe_allow_html=True)
+    # ── TABS ──────────────────────────────────────────────────────────────────
+    n_refactor = len([i for i in det_issues if i.get('code') in ('DEAD_ENDS','MENUS_NO_INPUT_HANDLER','MISSING_FALLBACKS')])
+    tab_labels = [
+        '📊 Score Breakdown',
+        '🗺️ Architecture',
+        '📦 Inventory',
+        '🔧 Refactoring' + (f' ({n_refactor})' if n_refactor else ''),
+    ]
+    tab1, tab2, tab3, tab4 = st.tabs(tab_labels)
 
-    # EXPORT IMPROVED FLOW — se desbloquea cuando hay propuestas aceptadas
-    ref = st.session_state.get('refactoring')
-    if ref and ref.get('proposals'):
-        accepted = [p for p in ref['proposals'] if p.get('accepted') is True]
-        if accepted:
-            st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
-            st.markdown('<span class="o-label">Export Improved Flow</span>', unsafe_allow_html=True)
-
-            n_accepted = len(accepted)
-            n_total    = len(ref['proposals'])
-            delta      = ref.get('score_delta_estimate', 0)
-            new_score  = min(analysis.get('score', 0) + delta, 100)
-
-            st.markdown(
-                '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.82rem;'
-                'color:#4A6080;margin-bottom:1rem;">'
-                + str(n_accepted) + ' of ' + str(n_total) + ' proposals accepted — '
-                'estimated improved score: '
-                '<strong style="color:#00D4AA;">' + str(new_score) + '/100</strong>'
-                '</div>',
-                unsafe_allow_html=True)
-
-            # Construir el YAML mejorado aplicando los proposed_yaml aceptados
-            try:
-                import yaml as _yaml
-                import json as _json
-
-                raw = st.session_state.get('raw_yaml', '')
-                try:
-                    improved_data = _yaml.safe_load(raw)
-                except Exception:
-                    improved_data = _json.loads(raw)
-
-                # Si es un wrapper fixture, trabajar sobre el inner
-                is_wrapper = isinstance(improved_data, dict) and set(improved_data.keys()) <= {'id','name','yaml','expected'}
-                if is_wrapper and 'yaml' in improved_data:
-                    inner = _yaml.safe_load(improved_data['yaml'])
-                else:
-                    inner = improved_data
-
-                # Aplicar cada propuesta aceptada — reconstruir el nodo en la estructura
-                def _all_nodes_dict(data):
-                    result = {}
-                    for section in ['menus','tasks','transfers','nodes','steps','actions']:
-                        raw_s = data.get(section, {})
-                        if isinstance(raw_s, dict):
-                            result[section] = raw_s
-                        elif isinstance(raw_s, list):
-                            result[section] = raw_s
-                    return result
-
-                import copy as _copy
-                improved_inner = _copy.deepcopy(inner)
-
-                for prop in accepted:
-                    node_id = prop.get('node_id','')
-                    try:
-                        fixed_node_full = _yaml.safe_load(prop.get('proposed_yaml',''))
-                        fixed_node = fixed_node_full.get(node_id, fixed_node_full) if isinstance(fixed_node_full, dict) else None
-                        if not fixed_node:
-                            continue
-                    except Exception:
-                        continue
-
-                    # Buscar y reemplazar el nodo en la estructura
-                    for section in ['menus','tasks','transfers','nodes','steps','actions']:
-                        sec = improved_inner.get(section)
-                        if isinstance(sec, dict) and node_id in sec:
-                            improved_inner[section][node_id] = fixed_node
-                        elif isinstance(sec, list):
-                            for idx, item in enumerate(sec):
-                                if isinstance(item, dict) and item.get('id') == node_id:
-                                    improved_inner[section][idx] = {**item, **fixed_node}
-
-                # Reconstruir el wrapper si era fixture
-                if is_wrapper:
-                    final_data = _copy.deepcopy(improved_data)
-                    final_data['yaml'] = _yaml.dump(improved_inner, default_flow_style=False, allow_unicode=True)
-                else:
-                    final_data = improved_inner
-
-                # Generar los tres formatos
-                yaml_out = _yaml.dump(final_data, default_flow_style=False, allow_unicode=True, sort_keys=False)
-                json_out = _json.dumps(final_data, indent=2, ensure_ascii=False)
-
-                try:
-                    import xmltodict as _xmltodict
-                    xml_out = _xmltodict.unparse({'flow': final_data}, pretty=True)
-                except Exception:
-                    xml_out = '<!-- xmltodict not available — install with: pip install xmltodict -->\n' + yaml_out
-
-                flow_name_clean = (getattr(flow, 'flow_name', 'flow') or 'flow').replace(' ', '_').lower()
-
-                col_y, col_j, col_x = st.columns(3)
-                col_y.download_button(
-                    label='↓ Download YAML',
-                    data=yaml_out,
-                    file_name=flow_name_clean + '_improved.yaml',
-                    mime='text/yaml',
-                    key='dl_yaml_' + key_prefix,
-                    use_container_width=True)
-                col_j.download_button(
-                    label='↓ Download JSON',
-                    data=json_out,
-                    file_name=flow_name_clean + '_improved.json',
-                    mime='application/json',
-                    key='dl_json_' + key_prefix,
-                    use_container_width=True)
-                col_x.download_button(
-                    label='↓ Download XML',
-                    data=xml_out,
-                    file_name=flow_name_clean + '_improved.xml',
-                    mime='application/xml',
-                    key='dl_xml_' + key_prefix,
-                    use_container_width=True)
-
-                # Resumen de cambios aplicados
-                st.markdown(
-                    '<div style="font-family:DM Mono,monospace;font-size:0.65rem;'
-                    'color:#1E3050;margin-top:0.75rem;">'
-                    'Changes applied: ' +
-                    ' · '.join([p.get('node_id','') + ' [' + p.get('issue_code','') + ']' for p in accepted]) +
-                    '</div>',
-                    unsafe_allow_html=True)
-
-            except Exception as ex:
-                st.error('Error building improved flow: ' + str(ex))
-
-    st.markdown('<div id="o-arch" class="o-anchor"></div>', unsafe_allow_html=True)
-    # ── FLOW ARCHITEAPH ───────────────────────────────────────────────
-    if flow and flow.nodes:
-        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
-        st.markdown('<span class="o-label">Flow Architecture</span>', unsafe_allow_html=True)
-        overlay_opts = {'Structure':'structure','Complexity':'complexity','Dependencies':'dependencies'}
-        selected = st.radio('', list(overlay_opts.keys()), horizontal=True,
-                            label_visibility='collapsed', key=f'overlay_{key_prefix}')
-        overlay_key = overlay_opts[selected]
-        svg = flow_architecture_graph(flow, inv, overlay=overlay_key)
-        if svg:
-            st.markdown(
-                f'<div style="background:#07080B;border:1px solid #0F1520;border-radius:10px;'
-                f'overflow:auto;margin-top:0.5rem;">{svg}</div>',
-                unsafe_allow_html=True)
-            if overlay_key == 'complexity':
-                st.markdown(
-                    '<div style="display:flex;gap:1rem;margin-top:0.5rem;">'
-                    '<span class="compat-chip" style="color:#F85149;">■ Dead end</span>'
-                    '<span class="compat-chip" style="color:#F0883E;">■ Missing fallback</span>'
-                    '<span class="compat-chip" style="color:#D29922;">■ Deep node</span>'
-                    '</div>', unsafe_allow_html=True)
-            elif overlay_key == 'dependencies':
-                st.markdown(
-                    '<span class="compat-chip" style="color:#F0883E;">'
-                    '■ External dependency — API · Auth · Data dip</span>',
-                    unsafe_allow_html=True)
-
-    st.markdown('<div id="o-inv" class="o-anchor"></div>', unsafe_allow_html=True)
-    # ── FLOW INVENTORY ────────────────────────────────────────────────────────
-    if inv:
-        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
-        st.markdown('<span class="o-label">Flow Inventory</span>', unsafe_allow_html=True)
-        c1,c2,c3,c4,c5,c6 = st.columns(6)
-        c1.metric('Nodes',     inv.get('total_nodes',0))
-        c2.metric('Menus',     inv.get('menu_nodes',0))
-        c3.metric('Transfers', inv.get('transfer_nodes',0))
-        c4.metric('Logic',     inv.get('task_nodes',0))
-        c5.metric('Self-Svc',  str(inv.get('self_service_ratio',0))+'%')
-        c6.metric('Ext. Deps', inv.get('total_external_deps',0))
-
-    # ── EXTERNAL DEPENDENCIES ─────────────────────────────────────────────────
-    if inv and any([inv.get('data_services'), inv.get('auth_services'),
-                    inv.get('dynamic_variables'), inv.get('unique_queues')]):
-        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
-        st.markdown('<span class="o-label">External Dependencies</span>', unsafe_allow_html=True)
-        chips = ''
-        for s in inv.get('data_services',   []): chips += f'<span class="orch-chip chip-teal">⬡ {s}</span>'
-        for s in inv.get('auth_services',   []): chips += f'<span class="orch-chip chip-blue">⬡ {s}</span>'
-        for v in inv.get('dynamic_variables',[]): chips += '<span class="orch-chip">'+'{'+v+'}</span>'
-        for q in inv.get('unique_queues',   []): chips += f'<span class="orch-chip">⇒ {q}</span>'
-        st.markdown(
-            '<div style="display:flex;flex-wrap:wrap;gap:0.2rem;">'+chips+'</div>',
-            unsafe_allow_html=True)
-
-    st.markdown('<div id="o-mig" class="o-anchor"></div>', unsafe_allow_html=True)
-    # ── MIGRATION TO CLOUD ────────────────────────────────────────────────────
-    if inv:
-        ml        = inv.get('migration_level', 'SIMPLE')
-        ms        = inv.get('migration_complexity_score', 0)
-        breakdown = inv.get('migration_score_breakdown', {})
-        flags     = inv.get('migration_risk_flags', [])
-
-        st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
-        st.markdown(
-            f'<div style="display:flex;align-items:center;gap:0.9rem;margin-bottom:0.75rem;">'            f'<span class="o-label" style="margin:0;">Migration to Cloud</span>'            f'{migration_badge(ml)}'            f'<span style="font-family:DM Mono,monospace;font-size:0.65rem;color:#2A3650;">{ms}/100</span>'            f'</div>', unsafe_allow_html=True)
-
-        # Benchmark banca
-        # Benchmark sectorial eliminado — datos no validados contra entidades reales
-
-        # 5D breakdown bars
-        if breakdown:
-            dim_colors = {
-                'D1_grafo':        '#0090FF',
-                'D2_dependencias': '#00D4AA',
-                'D3_riesgo':       '#F85149',
-                'D4_escala':       '#D29922',
-                'D5_testing':      '#9B72F5',
-            }
-            bars = '<div style="display:flex;flex-direction:column;gap:8px;margin:1rem 0;">'
-            for key, dim in breakdown.items():
-                label  = dim.get('label', key)
-                dscore = dim.get('score', 0)
-                dmax   = dim.get('max', 25)
-                pct    = round(dscore / dmax * 100) if dmax else 0
-                color  = dim_colors.get(key, '#2A3650')
-                bars += (
-                    f'<div style="display:flex;align-items:center;gap:10px;">'                    f'<div style="font-family:DM Mono,monospace;font-size:0.6rem;'                    f'color:#2A3650;width:155px;flex-shrink:0;">{label}</div>'                    f'<div style="flex:1;background:#080A0F;border-radius:2px;height:3px;">'                    f'<div style="width:{pct}%;background:{color};height:100%;'                    f'border-radius:2px;"></div></div>'                    f'<div style="font-family:DM Mono,monospace;font-size:0.6rem;'                    f'color:#2A3650;width:38px;text-align:right;">{dscore}/{dmax}</div>'                    f'</div>'
+    # ── TAB 1: SCORE BREAKDOWN ────────────────────────────────────────────────
+    with tab1:
+        if det:
+            cols = st.columns(len(det))
+            for col, (key, dim) in zip(cols, det.items()):
+                col_hex  = DIM_COLORS.get(key, '4A6080')
+                pct_val  = dim.get('pct', 0)
+                earned_v = dim.get('score', 0)
+                maxp_v   = dim.get('max', 0)
+                niss_v   = len(dim.get('issues', []))
+                dname_v  = dim.get('name', '')
+                iss_html = (f'<div style="font-family:DM Mono,monospace;font-size:0.58rem;'
+                           f'color:#F85149;margin-top:0.3rem;">{niss_v} issue(s)</div>') if niss_v else ''
+                card_h = (
+                    f'<div style="border:1px solid #0C1520;border-radius:8px;padding:0.75rem 0.8rem;">'
+                    f'<div style="font-family:DM Mono,monospace;font-size:0.55rem;letter-spacing:0.12em;'
+                    f'text-transform:uppercase;margin-bottom:0.4rem;color:#{col_hex};">{key}</div>'
+                    f'<div style="font-family:Syne,sans-serif;font-size:1.3rem;font-weight:800;'
+                    f'line-height:1;color:#{col_hex};">{earned_v}'
+                    f'<span style="font-size:0.7rem;color:#1E2840;font-family:DM Mono,monospace;">/{maxp_v}</span></div>'
+                    f'<div style="background:#0A0D14;border-radius:1px;height:2px;margin:0.4rem 0;">'
+                    f'<div style="background:#{col_hex};height:100%;width:{pct_val}%;border-radius:1px;"></div></div>'
+                    f'<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.7rem;color:#2A3E56;'
+                    f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{dname_v}</div>'
+                    + iss_html + '</div>'
                 )
-            bars += '</div>'
-            st.markdown(bars, unsafe_allow_html=True)
+                col.markdown(card_h, unsafe_allow_html=True)
 
-        # Score explanation
-        explanation = score_explanation(analysis)
-        if explanation:
-            st.markdown(explanation, unsafe_allow_html=True)
+            if det_issues:
+                st.markdown('<div style="margin-top:1.5rem;"></div>', unsafe_allow_html=True)
+                SEV_COLOR = {'CRITICAL':'F85149','HIGH':'F85149','MEDIUM':'D29922','LOW':'4A6080'}
+                for issue in sorted(det_issues, key=lambda x: {'CRITICAL':0,'HIGH':1,'MEDIUM':2,'LOW':3}.get(x.get('severity','LOW'),4)):
+                    sev     = issue.get('severity','')
+                    sev_c   = SEV_COLOR.get(sev,'4A6080')
+                    dim_key = issue.get('dim','')
+                    dim_col = DIM_COLORS.get(dim_key,'4A6080')
+                    fix     = issue.get('fix','')
+                    st.markdown(
+                        f'<div style="border:1px solid #0C1520;border-left:3px solid #{sev_c};'
+                        f'border-radius:6px;padding:0.6rem 0.85rem;margin-bottom:0.4rem;">'
+                        f'<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.25rem;">'
+                        f'<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#{dim_col};letter-spacing:0.1em;">{dim_key}</span>'
+                        f'<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#{sev_c};letter-spacing:0.1em;">{sev}</span>'
+                        f'<span style="font-family:DM Mono,monospace;font-size:0.55rem;color:#1E2840;">−{issue.get("penalty",0)} pts</span></div>'
+                        f'<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.82rem;color:#8BA0B8;margin-bottom:0.2rem;">{issue.get("message","")}</div>'
+                        + (f'<div style="font-family:DM Mono,monospace;font-size:0.68rem;color:#1E3050;">→ {fix}</div>' if fix else '')
+                        + '</div>',
+                        unsafe_allow_html=True)
+        if issues:
+            for i in issues:
+                st.error(i)
 
-        # Migration hours
-        st.markdown(migration_hours_card(inv), unsafe_allow_html=True)
+    # ── TAB 2: ARCHITECTURE ───────────────────────────────────────────────────
+    with tab2:
+        if flow and flow.nodes:
+            overlay_opts = {'Structure':'structure','Complexity':'complexity','Dependencies':'dependencies'}
+            selected = st.radio('', list(overlay_opts.keys()), horizontal=True,
+                                label_visibility='collapsed', key=f'overlay_{key_prefix}')
+            overlay_key = overlay_opts[selected]
+            svg = flow_architecture_graph(flow, inv, overlay=overlay_key)
+            if svg:
+                st.markdown(
+                    f'<div style="background:#07080B;border:1px solid #0F1520;border-radius:10px;'
+                    f'overflow:auto;margin-top:0.5rem;">{svg}</div>',
+                    unsafe_allow_html=True)
+                if overlay_key == 'complexity':
+                    st.markdown(
+                        '<div style="display:flex;gap:1rem;margin-top:0.5rem;">'
+                        '<span class="compat-chip" style="color:#F85149;">■ Dead end</span>'
+                        '<span class="compat-chip" style="color:#F0883E;">■ Missing fallback</span>'
+                        '<span class="compat-chip" style="color:#D29922;">■ Deep node</span>'
+                        '</div>', unsafe_allow_html=True)
+                elif overlay_key == 'dependencies':
+                    st.markdown(
+                        '<span class="compat-chip" style="color:#F0883E;">'
+                        '■ External dependency — API · Auth · Data dip</span>',
+                        unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="color:#1E2840;font-family:DM Mono,monospace;font-size:0.75rem;padding:2rem 0;">No flow graph available</div>', unsafe_allow_html=True)
 
-        # Risk flags — shown in D1-D6 breakdown above, no duplication
-        if flags:
-            n = len(flags)
-            st.markdown('<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:#D29922;margin-top:0.5rem;">' + str(n) + ' migration risk(s) — see Quality Score Breakdown above</div>', unsafe_allow_html=True)
+    # ── TAB 3: INVENTORY ──────────────────────────────────────────────────────
+    with tab3:
+        if inv:
+            c1,c2,c3,c4,c5,c6 = st.columns(6)
+            c1.metric('Nodes',     inv.get('total_nodes',0))
+            c2.metric('Menus',     inv.get('menu_nodes',0))
+            c3.metric('Transfers', inv.get('transfer_nodes',0))
+            c4.metric('Logic',     inv.get('task_nodes',0))
+            c5.metric('Self-Svc',  str(inv.get('self_service_ratio',0))+'%')
+            c6.metric('Ext. Deps', inv.get('total_external_deps',0))
 
+            if any([inv.get('data_services'), inv.get('auth_services'),
+                    inv.get('dynamic_variables'), inv.get('unique_queues')]):
+                st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+                st.markdown('<span class="o-label">External Dependencies</span>', unsafe_allow_html=True)
+                chips = ''
+                for s in inv.get('data_services',   []): chips += f'<span class="orch-chip chip-teal">⬡ {s}</span>'
+                for s in inv.get('auth_services',   []): chips += f'<span class="orch-chip chip-blue">⬡ {s}</span>'
+                for v in inv.get('dynamic_variables',[]): chips += '<span class="orch-chip">'+'{'+v+'}</span>'
+                for q in inv.get('unique_queues',   []): chips += f'<span class="orch-chip">⇒ {q}</span>'
+                st.markdown('<div style="display:flex;flex-wrap:wrap;gap:0.2rem;">'+chips+'</div>', unsafe_allow_html=True)
+
+            st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+            ml        = inv.get('migration_level', 'SIMPLE')
+            ms        = inv.get('migration_complexity_score', 0)
+            breakdown = inv.get('migration_score_breakdown', {})
+            flags     = inv.get('migration_risk_flags', [])
+            st.markdown(migration_hours_card(inv), unsafe_allow_html=True)
+            if flags:
+                n = len(flags)
+                st.markdown(
+                    f'<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:#D29922;margin-top:0.5rem;">'
+                    f'{n} migration risk(s) identified — see Score Breakdown tab</div>',
+                    unsafe_allow_html=True)
+            st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+            explanation = score_explanation(analysis)
+            st.markdown(migration_analysis_card(inv, breakdown), unsafe_allow_html=True)
+
+    # ── TAB 4: REFACTORING ────────────────────────────────────────────────────
+    with tab4:
+        fixable = [i for i in det_issues if i.get('code') in ('DEAD_ENDS','MENUS_NO_INPUT_HANDLER','MISSING_FALLBACKS')]
+        if fixable and st.session_state.get('raw_yaml'):
+            score_gain = sum(i.get('penalty', 0) for i in fixable)
+            cur_score  = analysis.get('score', 0)
+            new_score  = min(cur_score + score_gain, 100)
+            st.markdown(
+                f'<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.82rem;'
+                f'color:#4A6080;margin-bottom:1rem;">'
+                f'OrchestrIA can auto-fix <strong style="color:#C8D3E0;">{len(fixable)} issue(s)</strong>'
+                f' — estimated score improvement: <strong style="color:#00D4AA;">{cur_score} → {new_score}/100</strong>'
+                f'</div>',
+                unsafe_allow_html=True)
+            if st.button('⚡ Generate Fix Proposals', key='gen_refactor_' + key_prefix):
+                with st.spinner('Generating proposals...'):
+                    try:
+                        from src.agents.refactoring_agent import RefactoringAgent
+                        agent  = RefactoringAgent()
+                        result = agent.refactor(
+                            yaml_content=st.session_state.raw_yaml,
+                            issues=fixable,
+                            flow_name=getattr(flow, 'flow_name', '') if flow else '')
+                        st.session_state.refactoring = result.to_dict()
+                    except Exception as ex:
+                        st.error('Error: ' + str(ex))
+
+            ref = st.session_state.get('refactoring')
+            if ref and ref.get('proposals'):
+                for pi, prop in enumerate(ref['proposals']):
+                    sev       = prop.get('severity', 'LOW')
+                    sev_cols  = {'CRITICAL':'F85149','HIGH':'F85149','MEDIUM':'D29922','LOW':'4A6080'}
+                    label     = '[' + prop.get('issue_code','') + '] ' + prop.get('node_id','') + ' — ' + prop.get('description','')
+                    with st.expander(label[:90]):
+                        st.markdown(
+                            '<div style="font-family:DM Mono,monospace;font-size:0.68rem;'
+                            'color:#8BA0B8;margin-bottom:0.75rem;">' + prop.get('explanation','') + '</div>',
+                            unsafe_allow_html=True)
+                        c1, c2 = st.columns(2)
+                        c1.markdown('<span class="o-label">Original</span>', unsafe_allow_html=True)
+                        c1.code(prop.get('original_yaml',''), language='yaml')
+                        c2.markdown('<span class="o-label">Proposed Fix</span>', unsafe_allow_html=True)
+                        c2.code(prop.get('proposed_yaml',''), language='yaml')
+                        ca, cr, _ = st.columns([1,1,4])
+                        if ca.button('✅ Accept', key='acc_' + key_prefix + '_' + str(pi)):
+                            ref['proposals'][pi]['accepted'] = True
+                            st.success('Accepted')
+                        if cr.button('❌ Reject', key='rej_' + key_prefix + '_' + str(pi)):
+                            ref['proposals'][pi]['accepted'] = False
+                            st.error('Rejected')
+
+                # Export Improved Flow
+                accepted = [p for p in ref['proposals'] if p.get('accepted') is True]
+                if accepted:
+                    st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
+                    st.markdown('<span class="o-label">Export Improved Flow</span>', unsafe_allow_html=True)
+                    n_accepted = len(accepted)
+                    n_total    = len(ref['proposals'])
+                    delta      = sum(
+                        next((i.get('penalty',0) for i in det_issues
+                              if i.get('code') == p.get('issue_code')
+                              and p.get('node_id') in i.get('nodes',[])), 0)
+                        for p in accepted)
+                    new_score_e = min(analysis.get('score',0) + delta, 100)
+                    st.markdown(
+                        f'<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:0.82rem;'
+                        f'color:#4A6080;margin-bottom:1rem;">'
+                        f'{n_accepted} of {n_total} proposals accepted — '
+                        f'estimated improved score: <strong style="color:#00D4AA;">{new_score_e}/100</strong>'
+                        f'</div>',
+                        unsafe_allow_html=True)
+                    try:
+                        import yaml as _yaml, json as _json, copy as _copy
+                        raw = st.session_state.get('raw_yaml','')
+                        try:
+                            improved_data = _yaml.safe_load(raw)
+                        except Exception:
+                            improved_data = _json.loads(raw)
+                        is_wrapper = isinstance(improved_data, dict) and set(improved_data.keys()) <= {'id','name','yaml','expected'}
+                        inner = _yaml.safe_load(improved_data['yaml']) if is_wrapper and 'yaml' in improved_data else improved_data
+                        improved_inner = _copy.deepcopy(inner)
+                        for prop in accepted:
+                            node_id = prop.get('node_id','')
+                            try:
+                                fixed_full = _yaml.safe_load(prop.get('proposed_yaml',''))
+                                fixed_node = fixed_full.get(node_id, fixed_full) if isinstance(fixed_full, dict) else None
+                                if not fixed_node: continue
+                            except Exception: continue
+                            for section in ['menus','tasks','transfers','nodes','steps','actions']:
+                                sec = improved_inner.get(section)
+                                if isinstance(sec, dict) and node_id in sec:
+                                    improved_inner[section][node_id] = fixed_node
+                                elif isinstance(sec, list):
+                                    for idx, item in enumerate(sec):
+                                        if isinstance(item, dict) and item.get('id') == node_id:
+                                            improved_inner[section][idx] = {**item, **fixed_node}
+                        final_data = improved_data if is_wrapper else improved_inner
+                        if is_wrapper: final_data['yaml'] = _yaml.dump(improved_inner, default_flow_style=False, allow_unicode=True)
+                        yaml_out = _yaml.dump(final_data, default_flow_style=False, allow_unicode=True, sort_keys=False)
+                        json_out = _json.dumps(final_data, indent=2, ensure_ascii=False)
+                        flow_name_clean = (getattr(flow,'flow_name','flow') or 'flow').replace(' ','_').lower()
+                        col_y, col_j, col_x = st.columns(3)
+                        col_y.download_button('↓ Download YAML', data=yaml_out, file_name=flow_name_clean+'_improved.yaml', mime='text/yaml', key='dl_yaml_'+key_prefix, use_container_width=True)
+                        col_j.download_button('↓ Download JSON', data=json_out, file_name=flow_name_clean+'_improved.json', mime='application/json', key='dl_json_'+key_prefix, use_container_width=True)
+                        col_x.download_button('↓ Download XML', data=yaml_out, file_name=flow_name_clean+'_improved.xml', mime='application/xml', key='dl_xml_'+key_prefix, use_container_width=True)
+                        st.markdown('<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:#1E3050;margin-top:0.75rem;">Changes applied: ' + ' · '.join([p.get('node_id','')+'['+p.get('issue_code','')+']' for p in accepted]) + '</div>', unsafe_allow_html=True)
+                    except Exception as ex:
+                        st.error('Error building improved flow: ' + str(ex))
+        elif not st.session_state.get('raw_yaml'):
+            st.markdown('<div style="color:#1E2840;font-family:DM Mono,monospace;font-size:0.75rem;padding:2rem 0;">Analyze a flow to generate refactoring proposals</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="color:#1E2840;font-family:DM Mono,monospace;font-size:0.75rem;padding:2rem 0;">No auto-fixable issues detected in this flow</div>', unsafe_allow_html=True)
 
 
 
