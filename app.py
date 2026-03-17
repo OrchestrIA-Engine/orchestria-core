@@ -1410,7 +1410,7 @@ def migration_hours_card(inv: dict, compact: bool = False) -> str:
         <span style="font-family:Syne,sans-serif;font-weight:800;
               font-size:2.2rem;color:{ml_color};line-height:1;">{total}h</span>
         <span style="font-family:DM Mono,monospace;font-size:0.75rem;
-              color:#4B5568;">~{days} working days</span>
+              color:#4B5568;">~{max(1,days-1)}–{days+1} working days (estimate)</span>
       </div>
     </div>
     <div style="text-align:right;">
@@ -2226,7 +2226,7 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
             f'<div style="display:flex;align-items:center;gap:0.9rem;margin-bottom:0.75rem;">'            f'<span class="o-label" style="margin:0;">Migration to Cloud</span>'            f'{migration_badge(ml)}'            f'<span style="font-family:DM Mono,monospace;font-size:0.65rem;color:#2A3650;">{ms}/100</span>'            f'</div>', unsafe_allow_html=True)
 
         # Benchmark banca
-        st.markdown(benchmark_card(inv, 'banking'), unsafe_allow_html=True)
+        # Benchmark sectorial eliminado — datos no validados contra entidades reales
 
         # 5D breakdown bars
         if breakdown:
@@ -2258,12 +2258,10 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
         # Migration hours
         st.markdown(migration_hours_card(inv), unsafe_allow_html=True)
 
-        # Risk flags
+        # Risk flags — shown in D1-D6 breakdown above, no duplication
         if flags:
-            for f_ in flags:
-                st.warning(f_)
-        else:
-            st.success('No migration risks detected')
+            n = len(flags)
+            st.markdown('<div style="font-family:DM Mono,monospace;font-size:0.65rem;color:#D29922;margin-top:0.5rem;">' + str(n) + ' migration risk(s) — see Quality Score Breakdown above</div>', unsafe_allow_html=True)
 
 
 
