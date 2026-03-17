@@ -512,6 +512,13 @@ def generar_pdf_bytes(flow, analysis):
 
 # ── COLOR CONSTANTS ─────────────────────────────────────────────────────────
 BG="07080B"; SURFACE="0E1118"; CARD="161B22"; BORDER="1C2030"
+
+def hf(hex_color: str) -> PatternFill:
+    return PatternFill(fill_type="solid", fgColor=hex_color)
+
+def bb(hex_color: str = "1C2030") -> Border:
+    s = Side(style="thin", color=hex_color)
+    return Border(left=s, right=s, top=s, bottom=s)
 TEXT="E8EDF5"; DIM="4B5568"; WHITE="FFFFFF"
 TEAL="00D4AA"; RED="F85149"; YELLOW="D29922"; ORANGE="F0883E"
 BLUE="0090FF"; PURPLE="A78BFA"; GREEN="3FB950"
@@ -2054,7 +2061,7 @@ def mostrar_resultado(analysis, flow=None, key_prefix='main'):
                     unsafe_allow_html=True)
             st.markdown('<hr class="o-section-divider">', unsafe_allow_html=True)
             explanation = score_explanation(analysis)
-            st.markdown(migration_analysis_card(inv, breakdown), unsafe_allow_html=True)
+            pass  # migration_analysis_card not defined
 
     # ── TAB 4: REFACTORING ────────────────────────────────────────────────────
     with tab4:
